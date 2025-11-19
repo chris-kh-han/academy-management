@@ -63,3 +63,8 @@ export async function getSalesByPeriods() {
     monthSales: groupAndTop3(monthRows.data),
   };
 }
+
+export async function getAllIngredients() {
+  const { data: ingredients } = await supabase.from('ingredients').select('*');
+  return ingredients;
+}
