@@ -1,8 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import type { Sale } from '@/types';
-const supabase = await createClient();
 
 export async function getSales() {
+  const supabase = await createClient();
   const { data: sales } = await supabase
     .from('menu_sales')
     .select('*, menus(menu_name)');
@@ -10,6 +10,8 @@ export async function getSales() {
 }
 
 export async function getSalesByPeriods() {
+  const supabase = await createClient();
+
   // 1. 각 기간별 전체 row를 가져옴 (limit 없이)
   const [dayRows, weekRows, monthRows] = await Promise.all([
     supabase
@@ -47,13 +49,10 @@ export async function getSalesByPeriods() {
       return acc;
     }, [] as Sale[]);
     // menus 필드 제거(선택)
-    // console.log(merged);
-
     merged.forEach((item: Sale) => {
       delete item.menus;
     });
 
-    // console.log(merged);
     return merged.sort((a, b) => b.total_sales - a.total_sales).slice(0, 3);
   }
 
@@ -65,6 +64,7 @@ export async function getSalesByPeriods() {
 }
 
 export async function getAllIngredients() {
+  const supabase = await createClient();
   const { data: ingredients } = await supabase.from('ingredients').select('*');
   return ingredients;
 }
