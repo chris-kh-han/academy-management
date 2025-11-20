@@ -7,6 +7,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { PanelLeftIcon } from 'lucide-react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -346,31 +347,39 @@ function SidebarInput({
 
 function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const pathname = usePathname();
 
   return (
     <div
       data-slot='sidebar-header'
       data-sidebar='header'
-      className={cn('flex flex-col gap-2 p-2 mt-10', className)}
+      className={cn('flex flex-col gap-2 p-2', className)}
       {...props}
     >
-      {menuType.map((menu) => (
-        <Link
-          key={menu.path}
-          href={menu.path}
-          onClick={() => {
-            if (isMobile) setOpenMobile(false);
-          }}
-          className={cn(
-            'px-4 py-3 rounded-lg',
-            'bg-card text-card-foreground',
-            'hover:bg-primary hover:text-primary-foreground',
-            'border border-border',
-          )}
-        >
-          {menu.label}
-        </Link>
-      ))}
+      {menuType.map((menu) => {
+        const isActive =
+          pathname === menu.path || pathname?.startsWith(menu.path + '/');
+        return (
+          <Link
+            key={menu.path}
+            href={menu.path}
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+            }}
+            aria-current={isActive ? 'page' : undefined}
+            className={cn(
+              'px-4 py-3 rounded-lg border',
+              // base colors
+              isActive
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-card-foreground hover:bg-primary hover:text-primary-foreground',
+              'border-border',
+            )}
+          >
+            {menu.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }

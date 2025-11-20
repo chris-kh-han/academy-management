@@ -68,3 +68,13 @@ export async function getAllIngredients() {
   const { data: ingredients } = await supabase.from('ingredients').select('*');
   return ingredients;
 }
+
+export async function getAllRecipes() {
+  const supabase = await createClient();
+  // supabase-js v2 ordering: pass options object to `order` for ascending/descending
+  const { data: recipes } = await supabase
+    .from('menu_recipes')
+    .select('*')
+    .order('menu_id', { ascending: true });
+  return recipes;
+}
