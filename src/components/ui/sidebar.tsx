@@ -36,7 +36,7 @@ type MenuItem = {
 const menuType: MenuItem[] = [
   { label: '대시보드', path: '/dashboard' },
   { label: '재고 관리', path: '/inventory' },
-  { label: '입고/출고 관리', path: '/stock' },
+  { label: '입고/출고 관리', path: '/movements' },
   { label: '메뉴/레서피', path: '/recipes' },
   { label: '리포트', path: '/reports' },
   { label: '설정', path: '/settings' },
@@ -45,7 +45,6 @@ const menuType: MenuItem[] = [
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
-const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 
@@ -204,12 +203,8 @@ function Sidebar({
           data-sidebar='sidebar'
           data-slot='sidebar'
           data-mobile='true'
-          className='bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden'
-          style={
-            {
-              '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          // 모바일에서는 화면 전체를 차지하도록 inset-0 + w-screen 사용
+          className='bg-sidebar text-sidebar-foreground inset-0 w-screen p-0'
           side={side}
         >
           <SheetHeader className='sr-only'>
@@ -356,7 +351,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot='sidebar-header'
       data-sidebar='header'
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn('flex flex-col gap-2 p-2 mt-10', className)}
       {...props}
     >
       {menuType.map((menu) => (
@@ -366,12 +361,12 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
           onClick={() => {
             if (isMobile) setOpenMobile(false);
           }}
-          className='
-            px-4 py-3 rounded-lg
-            bg-card text-card-foreground
-            hover:bg-primary hover:text-primary-foreground
-            border border-border
-          '
+          className={cn(
+            'px-4 py-3 rounded-lg',
+            'bg-card text-card-foreground',
+            'hover:bg-primary hover:text-primary-foreground',
+            'border border-border',
+          )}
         >
           {menu.label}
         </Link>
@@ -643,9 +638,9 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<'div'> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
+  // Deterministic width for skeleton to avoid SSR/CSR mismatch.
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
+    return '70%';
   }, []);
 
   return (
