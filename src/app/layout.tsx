@@ -7,6 +7,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import Menu from '@/components/Menu';
 import Navbar from '@/components/Navbar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -26,24 +28,34 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang='en'>
         <body className={inter.className}>
-          <div className='h-screen flex'>
-            {/* LEFT */}
+          {/* <div className='h-screen flex'>
+
             <div className='w-[14%] md:w-[8%] lg:w-[16%] xl:w-[14%] p-4'>
               <Link
                 href='/'
                 className='flex items-center justify-center lg:justify-start gap-2'
               >
                 <Image src='/next.svg' alt='logo' width={128} height={128} />
-                {/* <span className='hidden lg:block font-bold'>학원</span> */}
+
               </Link>
               <Menu />
             </div>
-            {/* RIGHT */}
+
             <div className='w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-auto flex flex-col'>
               <Navbar />
               {children}
             </div>
-          </div>
+          </div> */}
+          <SidebarProvider>
+            <AppSidebar />
+            <main className='w-full'>
+              <SidebarTrigger />
+              <div className='w-full bg-[#F7F8FA] overflow-auto flex flex-col'>
+                <Navbar />
+                {children}
+              </div>
+            </main>
+          </SidebarProvider>
 
           <ToastContainer position='bottom-right' theme='dark' />
         </body>

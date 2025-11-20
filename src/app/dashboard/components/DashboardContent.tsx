@@ -57,15 +57,15 @@ export default function DashboardContent({
   console.log(weekSales);
 
   return (
-    <div className='p-4 flex gap-4 flex-col w-full'>
+    <div className='p-4 flex gap-4 flex-col w-full '>
       {/* 매출 순위 */}
-      <div className='flex w-full gap-4'>
-        <div className='w-2/3 gap-8 flex flex-col'>
+      <div className='flex flex-col md:flex-row w-full gap-4'>
+        <div className='w-full md:w-2/3 gap-8 flex flex-col'>
           <DashboardCard sales={daySales} title='어제' />
           <DashboardCard sales={weekSales} title='이번 주' />
           <DashboardCard sales={monthSales} title='이번 달' />
         </div>
-        <div className='w-1/3 gap-8 flex flex-col'>
+        <div className='w-full md:w-1/3 gap-8 flex flex-col'>
           <Calendar />
           <div className='mt-28'>
             <GlassCard>
