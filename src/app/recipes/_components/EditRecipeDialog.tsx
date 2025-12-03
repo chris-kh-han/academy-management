@@ -10,7 +10,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Trash2, Plus } from 'lucide-react';
 import { updateRecipeIngredients } from '../_actions/updateRecipe';
 
