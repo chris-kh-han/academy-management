@@ -71,10 +71,60 @@ export async function getAllIngredients() {
 
 export async function getAllRecipes() {
   const supabase = await createClient();
-  // supabase-js v2 ordering: pass options object to `order` for ascending/descending
-  const { data: recipes } = await supabase
+  const { data: recipes, error } = await supabase
     .from('menu_recipes')
-    .select('*')
+    .select(
+      `
+      *,
+      menus:menu_id ( menu_id, menu_name )
+    `,
+    )
     .order('menu_id', { ascending: true });
+
+  if (error) {
+    console.error('getAllRecipes error:', error);
+  }
+
   return recipes;
+}
+// export async function getAllRecipes() {
+//   const supabase = await createClient();
+//   const { data: recipes, error } = await supabase
+//     .from('menu_recipes')
+//     .select(
+//       `
+//       required_qty, unit, loss_rate,
+//       menus:menu_id ( menu_id, menu_name ),
+//       ingredients:ingredient_id ( ingredient_id, ingredient_name )
+//     `,
+//     )
+//     .order('menu_id', { ascending: true });
+
+//   if (error) {
+//     console.error('getAllRecipes error:', error);
+//   }
+
+//   return recipes;
+// }
+
+export async function fetchMenuRecipeIngredients(menuId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('menu_recipes')
+    .select(
+      `
+    required_qty, unit, loss_rate,
+    menus:menu_id ( menu_id, menu_name, category ),
+    ingredients:ingredient_id ( ingredient_id, ingredient_name, category )
+  `,
+    )
+    .eq('menu_id', menuId)
+    .order('ingredient_id', { ascending: true }); // 기준: menu_recipes.ingredient_id
+
+  if (error) {
+    console.error('Error fetching top ingredients:', error);
+    return [];
+  }
+  return data;
 }

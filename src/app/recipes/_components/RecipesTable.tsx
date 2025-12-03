@@ -13,17 +13,13 @@ import {
   useReactTable,
   VisibilityState,
 } from '@tanstack/react-table';
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Pencil } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -35,146 +31,130 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { EditRecipeDialog } from './EditRecipeDialog';
 
-const data: Payment[] = [
-  {
-    id: 'm5gr84i9',
-    amount: 316,
-    status: 'success',
-    email: 'ken99@example.com',
-  },
-  {
-    id: '3u1reuv4',
-    amount: 242,
-    status: 'success',
-    email: 'Abe45@example.com',
-  },
-  {
-    id: 'derv1ws0',
-    amount: 837,
-    status: 'processing',
-    email: 'Monserrat44@example.com',
-  },
-  {
-    id: '5kma53ae',
-    amount: 874,
-    status: 'success',
-    email: 'Silas22@example.com',
-  },
-  {
-    id: 'bhqecj4p',
-    amount: 721,
-    status: 'failed',
-    email: 'carmella@example.com',
-  },
-];
-
-export type Payment = {
-  id: string;
-  amount: number;
-  status: 'pending' | 'processing' | 'success' | 'failed';
-  email: string;
+type Ingredient = {
+  ingredient_id: string;
+  name: string | undefined;
+  category: string | undefined;
+  qty: number | null;
+  unit: string | undefined;
+  loss_rate: number | null;
 };
 
-export const columns: ColumnDef<Payment>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
+type RecipeRow = {
+  menuId: string;
+  menuName: string;
+  ingredients: Ingredient[];
+};
 
-  {
-    accessorKey: 'name',
-    header: '이름',
-    cell: ({ row }) => <div className='capitalize'>{row.getValue('name')}</div>,
-  },
+type AllIngredient = {
+  ingredient_id: string;
+  ingredient_name: string;
+  category: string;
+};
 
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => (
-      <div className='capitalize'>{row.getValue('status')}</div>
-    ),
-  },
-  {
-    accessorKey: 'email',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant='ghost'
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Email
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className='lowercase'>{row.getValue('email')}</div>,
-  },
-  {
-    accessorKey: 'amount',
-    header: () => <div className='text-right'>Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('amount'));
+type RecipesProps = {
+  recipes: Record<
+    string,
+    {
+      menuName: string;
+      ingredients: Ingredient[];
+    }
+  >;
+  allIngredients: AllIngredient[];
+};
 
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-      }).format(amount);
+export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
+  const [editingRecipe, setEditingRecipe] = React.useState<RecipeRow | null>(
+    null,
+  );
 
-      return <div className='text-right font-medium'>{formatted}</div>;
-    },
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-      const payment = row.original;
+  const data: RecipeRow[] = React.useMemo(() => {
+    return Object.entries(recipes).map(([menuId, value]) => ({
+      menuId,
+      menuName: value.menuName,
+      ingredients: value.ingredients,
+    }));
+  }, [recipes]);
 
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
+  const columns: ColumnDef<RecipeRow>[] = React.useMemo(
+    () => [
+      {
+        accessorKey: 'menuName',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            메뉴 이름
+            <ArrowUpDown className='ml-2 h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div className='font-medium'>{row.getValue('menuName')}</div>
+        ),
+      },
+      {
+        accessorKey: 'ingredients',
+        header: '재료 목록',
+        cell: ({ row }) => {
+          const ingredients = row.getValue('ingredients') as Ingredient[];
+          const visibleCount = 3;
+          const hasMore = ingredients.length > visibleCount;
+          const visibleIngredients = ingredients.slice(0, visibleCount);
+
+          return (
+            <div className='group relative'>
+              <ul className='list-disc pl-4'>
+                {visibleIngredients.map((ing, idx) => (
+                  <li key={idx}>
+                    {ing.name ?? '알 수 없음'} - {ing.qty ?? 0}
+                    {ing.unit ?? ''}
+                  </li>
+                ))}
+              </ul>
+              {hasMore && (
+                <>
+                  <span className='text-sm text-muted-foreground cursor-pointer'>
+                    +{ingredients.length - visibleCount}개 더보기
+                  </span>
+                  <div className='absolute left-0 top-full z-10 hidden w-max max-w-xs rounded-md border bg-white p-2 shadow-lg group-hover:block'>
+                    <ul className='list-disc pl-4'>
+                      {ingredients.map((ing, idx) => (
+                        <li key={idx}>
+                          {ing.name ?? '알 수 없음'} - {ing.qty ?? 0}
+                          {ing.unit ?? ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: '수정',
+        cell: ({ row }) => {
+          const recipe = row.original;
+          return (
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => setEditingRecipe(recipe)}
             >
-              Copy payment ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
+              <Pencil className='h-4 w-4' />
+            </Button>
+          );
+        },
+      },
+    ],
+    [],
+  );
 
-export function RecipesTable() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -206,10 +186,12 @@ export function RecipesTable() {
     <div className='w-full'>
       <div className='flex items-center py-4'>
         <Input
-          placeholder='Filter emails...'
-          value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
+          placeholder='메뉴 이름 검색...'
+          value={
+            (table.getColumn('menuName')?.getFilterValue() as string) ?? ''
+          }
           onChange={(event) =>
-            table.getColumn('email')?.setFilterValue(event.target.value)
+            table.getColumn('menuName')?.setFilterValue(event.target.value)
           }
           className='max-w-sm'
         />
@@ -314,6 +296,17 @@ export function RecipesTable() {
           </Button>
         </div>
       </div>
+
+      {editingRecipe && (
+        <EditRecipeDialog
+          open={!!editingRecipe}
+          onOpenChange={(open) => !open && setEditingRecipe(null)}
+          menuId={editingRecipe.menuId}
+          menuName={editingRecipe.menuName}
+          ingredients={editingRecipe.ingredients}
+          allIngredients={allIngredients}
+        />
+      )}
     </div>
   );
 }
