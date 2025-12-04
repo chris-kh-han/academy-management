@@ -1,13 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { PanelLeftIcon } from 'lucide-react';
+import { PanelLeftIcon, CircleChevronLeft } from 'lucide-react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
-import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,24 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-type MenuItem = {
-  label: string;
-  path: string;
-  icon?: React.ReactNode;
-  roles?: string[]; // 접근 가능한 역할
-};
-
-const menuType: MenuItem[] = [
-  { label: '대시보드', path: '/dashboard' },
-  { label: '재고 관리', path: '/inventory' },
-  { label: '입고/출고 관리', path: '/movements' },
-  { label: '메뉴/레서피', path: '/recipes' },
-  { label: '리포트', path: '/reports' },
-  { label: '근태 관리', path: '/attendance' },
-  { label: '급여 관리', path: '/payroll' },
-  { label: '설정', path: '/settings' },
-];
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -158,7 +138,7 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full',
+            'group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-0 flex-1 w-full',
             className,
           )}
           {...props}
@@ -244,7 +224,7 @@ function Sidebar({
       <div
         data-slot='sidebar-container'
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
+          'fixed top-16 bottom-0 z-10 hidden h-[calc(100vh-4rem)] w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
@@ -281,14 +261,14 @@ function SidebarTrigger({
       data-slot='sidebar-trigger'
       variant='ghost'
       size='icon'
-      className={cn('size-7', className)}
+      className={cn('size-8 cursor-pointer', className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      <PanelLeftIcon className='size-8' />
       <span className='sr-only'>Toggle Sidebar</span>
     </Button>
   );
@@ -348,41 +328,13 @@ function SidebarInput({
 }
 
 function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  const { isMobile, setOpenMobile } = useSidebar();
-  const pathname = usePathname();
-
   return (
     <div
       data-slot='sidebar-header'
       data-sidebar='header'
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn('flex flex-col gap-2 p-4', className)}
       {...props}
-    >
-      {menuType.map((menu) => {
-        const isActive =
-          pathname === menu.path || pathname?.startsWith(menu.path + '/');
-        return (
-          <Link
-            key={menu.path}
-            href={menu.path}
-            onClick={() => {
-              if (isMobile) setOpenMobile(false);
-            }}
-            aria-current={isActive ? 'page' : undefined}
-            className={cn(
-              'px-4 py-3 rounded-lg border',
-              // base colors
-              isActive
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-card-foreground hover:bg-primary hover:text-primary-foreground',
-              'border-border',
-            )}
-          >
-            {menu.label}
-          </Link>
-        );
-      })}
-    </div>
+    />
   );
 }
 
@@ -391,7 +343,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot='sidebar-footer'
       data-sidebar='footer'
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn('flex flex-col gap-2 p-4', className)}
       {...props}
     />
   );

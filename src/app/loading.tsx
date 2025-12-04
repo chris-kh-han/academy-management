@@ -1,4 +1,7 @@
 export default function Loading() {
-  // Or a custom loading skeleton component
-  return <p>Loading...</p>;
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <p>Loading...</p>
+    </div>
+  );
 }

@@ -5,12 +5,9 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import Menu from '@/components/Menu';
-import Navbar from '@/components/Navbar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/app-sidebar';
-import Image from 'next/image';
-import Link from 'next/link';
+import AppSidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -46,16 +43,23 @@ export default function RootLayout({
               {children}
             </div>
           </div> */}
-          <SidebarProvider>
-            <AppSidebar />
-            <main className='w-full'>
-              <SidebarTrigger />
-              <div className='w-full bg-[#F7F8FA] overflow-auto flex flex-col'>
-                <Navbar />
-                {children}
-              </div>
-            </main>
-          </SidebarProvider>
+          <div className='flex flex-col h-screen bg-[#F7F8FA]'>
+            {/* 상단 헤더 영역 */}
+            <Header />
+            {/* 사이드바 + 메인 콘텐츠 */}
+            <SidebarProvider>
+              <AppSidebar />
+              <main className='w-full overflow-auto'>
+                <div className='w-full overflow-auto flex'>
+                  {/* SidebarTrigger - md 이상에서만 표시 */}
+                  <div className='hidden md:block pt-6 pl-2'>
+                    <SidebarTrigger />
+                  </div>
+                  <div className='flex-1'>{children}</div>
+                </div>
+              </main>
+            </SidebarProvider>
+          </div>
 
           <ToastContainer position='bottom-right' theme='dark' />
         </body>
