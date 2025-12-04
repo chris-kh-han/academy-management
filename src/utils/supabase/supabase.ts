@@ -418,3 +418,516 @@ export async function getStockMovementsSummary(
 
   return summary;
 }
+
+// ========== Settings 페이지용 함수들 ==========
+
+import type {
+  BusinessSettings,
+  InventorySettings,
+  RecipeSettings,
+  ReportSettings,
+  NotificationSettings,
+  SystemSettings,
+  UserPermission,
+} from '@/types';
+
+// 비즈니스 설정
+export async function getBusinessSettings(): Promise<BusinessSettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('business_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getBusinessSettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateBusinessSettings(
+  settings: Partial<BusinessSettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('business_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateBusinessSettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 재고 설정
+export async function getInventorySettings(): Promise<InventorySettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('inventory_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getInventorySettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateInventorySettings(
+  settings: Partial<InventorySettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('inventory_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateInventorySettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 레시피 설정
+export async function getRecipeSettings(): Promise<RecipeSettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('recipe_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getRecipeSettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateRecipeSettings(
+  settings: Partial<RecipeSettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('recipe_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateRecipeSettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 리포트 설정
+export async function getReportSettings(): Promise<ReportSettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('report_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getReportSettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateReportSettings(
+  settings: Partial<ReportSettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('report_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateReportSettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 알림 설정
+export async function getNotificationSettings(): Promise<NotificationSettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('notification_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getNotificationSettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateNotificationSettings(
+  settings: Partial<NotificationSettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('notification_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateNotificationSettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 시스템 설정
+export async function getSystemSettings(): Promise<SystemSettings | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('system_settings')
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('getSystemSettings error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateSystemSettings(
+  settings: Partial<SystemSettings>,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('system_settings')
+    .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateSystemSettings error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 사용자 권한 관리
+export async function getUserPermissions(): Promise<UserPermission[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('user_permissions')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('getUserPermissions error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function updateUserPermission(
+  permission: Partial<UserPermission> & { user_id: string },
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('user_permissions')
+    .upsert({ ...permission, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('updateUserPermission error:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteUserPermission(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('user_permissions')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('deleteUserPermission error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 모든 설정 한번에 가져오기
+export async function getAllSettings() {
+  const [
+    business,
+    inventory,
+    recipe,
+    report,
+    notification,
+    system,
+    users,
+  ] = await Promise.all([
+    getBusinessSettings(),
+    getInventorySettings(),
+    getRecipeSettings(),
+    getReportSettings(),
+    getNotificationSettings(),
+    getSystemSettings(),
+    getUserPermissions(),
+  ]);
+
+  return {
+    business,
+    inventory,
+    recipe,
+    report,
+    notification,
+    system,
+    users,
+  };
+}
+
+// ========== 급여/근태 관리 함수들 ==========
+
+// 급여 설정 조회
+export async function getSalarySettings() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('salary_settings')
+    .select('*, user_permissions(user_name, user_email)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('getSalarySettings error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// 특정 사용자 급여 설정 조회
+export async function getSalarySettingByUserId(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('salary_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    console.error('getSalarySettingByUserId error:', error);
+    return null;
+  }
+  return data;
+}
+
+// 급여 설정 저장/수정
+export async function upsertSalarySetting(
+  setting: Partial<import('@/types').SalarySetting> & { user_id: string },
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('salary_settings')
+    .upsert({ ...setting, updated_at: new Date().toISOString() });
+
+  if (error) {
+    console.error('upsertSalarySetting error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 근무 기록 조회 (기간별)
+export async function getWorkRecords(startDate: string, endDate: string, userId?: string) {
+  const supabase = await createClient();
+  let query = supabase
+    .from('work_records')
+    .select('*, user_permissions(user_name, user_email)')
+    .gte('work_date', startDate)
+    .lte('work_date', endDate)
+    .order('work_date', { ascending: false });
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getWorkRecords error:', error);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((record: any) => ({
+    ...record,
+    user_name: record.user_permissions?.user_name,
+    user_email: record.user_permissions?.user_email,
+  }));
+}
+
+// 근무 기록 추가/수정
+export async function upsertWorkRecord(
+  record: Partial<import('@/types').WorkRecord> & { user_id: string; work_date: string },
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  // 근무 시간 계산
+  let workMinutes = 0;
+  if (record.clock_in && record.clock_out) {
+    const clockIn = new Date(`2000-01-01T${record.clock_in}`);
+    const clockOut = new Date(`2000-01-01T${record.clock_out}`);
+    workMinutes = Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000) - (record.break_minutes || 0);
+  }
+
+  const { error } = await supabase
+    .from('work_records')
+    .upsert({
+      ...record,
+      work_minutes: workMinutes,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('upsertWorkRecord error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 근무 기록 삭제
+export async function deleteWorkRecord(id: number): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('work_records')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('deleteWorkRecord error:', error);
+    return false;
+  }
+  return true;
+}
+
+// 급여 내역 조회
+export async function getPayrolls(year: number, month?: number) {
+  const supabase = await createClient();
+
+  let startDate: string;
+  let endDate: string;
+
+  if (month) {
+    startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+  } else {
+    startDate = `${year}-01-01`;
+    endDate = `${year}-12-31`;
+  }
+
+  const { data, error } = await supabase
+    .from('payroll')
+    .select('*, user_permissions(user_name, user_email)')
+    .gte('pay_period_start', startDate)
+    .lte('pay_period_end', endDate)
+    .order('pay_period_start', { ascending: false });
+
+  if (error) {
+    console.error('getPayrolls error:', error);
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((payroll: any) => ({
+    ...payroll,
+    user_name: payroll.user_permissions?.user_name,
+    user_email: payroll.user_permissions?.user_email,
+  }));
+}
+
+// 급여 계산 및 생성
+export async function calculateAndCreatePayroll(
+  userId: string,
+  periodStart: string,
+  periodEnd: string,
+): Promise<import('@/types').Payroll | null> {
+  const supabase = await createClient();
+
+  // 1. 급여 설정 가져오기
+  const salarySetting = await getSalarySettingByUserId(userId);
+  if (!salarySetting) {
+    console.error('No salary setting found for user:', userId);
+    return null;
+  }
+
+  // 2. 해당 기간 근무 기록 가져오기
+  const workRecords = await getWorkRecords(periodStart, periodEnd, userId);
+
+  // 3. 급여 계산
+  let totalWorkMinutes = 0;
+  let overtimeMinutes = 0;
+  const totalWorkDays = workRecords.length;
+
+  workRecords.forEach((record) => {
+    totalWorkMinutes += record.work_minutes || 0;
+    overtimeMinutes += record.overtime_minutes || 0;
+  });
+
+  const hourlyRate = salarySetting.hourly_rate || 9860;
+  const basePay = Math.floor((totalWorkMinutes / 60) * hourlyRate);
+  const overtimePay = Math.floor((overtimeMinutes / 60) * hourlyRate * (salarySetting.overtime_rate || 1.5));
+  const netPay = basePay + overtimePay;
+
+  // 4. 급여 내역 저장
+  const payroll = {
+    user_id: userId,
+    pay_period_start: periodStart,
+    pay_period_end: periodEnd,
+    total_work_days: totalWorkDays,
+    total_work_minutes: totalWorkMinutes,
+    overtime_minutes: overtimeMinutes,
+    base_pay: basePay,
+    overtime_pay: overtimePay,
+    night_pay: 0,
+    weekend_pay: 0,
+    bonus: 0,
+    deductions: 0,
+    net_pay: netPay,
+    status: 'draft' as const,
+  };
+
+  const { data, error } = await supabase
+    .from('payroll')
+    .upsert(payroll)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('calculateAndCreatePayroll error:', error);
+    return null;
+  }
+
+  return data;
+}
+
+// 급여 상태 업데이트
+export async function updatePayrollStatus(
+  id: number,
+  status: import('@/types').PayrollStatus,
+  paidAt?: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('payroll')
+    .update({
+      status,
+      paid_at: paidAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('updatePayrollStatus error:', error);
+    return false;
+  }
+  return true;
+}
