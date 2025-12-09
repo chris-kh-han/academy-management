@@ -7,6 +7,7 @@ type DashboardCardProps = {
 };
 
 export default function DashboardCard({ title, sales }: DashboardCardProps) {
+  console.log(sales);
   return (
     <GlassCard>
       <div className='relative z-10'>

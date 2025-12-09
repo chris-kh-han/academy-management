@@ -1,6 +1,367 @@
 import { createClient } from '@/utils/supabase/server';
 import type { Sale } from '@/types';
 
+// ========== 날짜 유틸리티 함수들 ==========
+
+// 테스트용 고정 날짜 (나중에 실제 날짜로 변경 시 이 값만 수정하면 됨)
+const USE_FIXED_DATE = true; // false로 바꾸면 실제 오늘 날짜 사용
+const FIXED_TODAY = '2025-11-01';
+
+// 타임존 설정 - 환경변수로 관리 (기본값: 한국)
+// 한국: 'Asia/Seoul', 미국 동부: 'America/New_York', 미국 서부: 'America/Los_Angeles'
+const TIMEZONE = process.env.TIMEZONE;
+
+/**
+ * 지정된 타임존 기준 오늘 날짜를 반환 (YYYY-MM-DD 형식)
+ */
+export function getToday(): string {
+  if (USE_FIXED_DATE) {
+    return FIXED_TODAY;
+  }
+  // 타임존 기준 날짜 반환
+  return new Date().toLocaleDateString('sv-SE', { timeZone: TIMEZONE });
+}
+
+/**
+ * 어제 날짜를 반환 (YYYY-MM-DD 형식)
+ */
+export function getYesterday(): string {
+  const today = new Date(getToday());
+  today.setDate(today.getDate() - 1);
+  return today.toISOString().split('T')[0];
+}
+
+/**
+ * N일 전 날짜를 반환 (YYYY-MM-DD 형식)
+ */
+export function getDaysAgo(days: number): string {
+  const today = new Date(getToday());
+  today.setDate(today.getDate() - days);
+  return today.toISOString().split('T')[0];
+}
+
+/**
+ * 이번 주 시작일 (월요일) 반환
+ */
+export function getWeekStart(): string {
+  const today = new Date(getToday());
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 기준
+  today.setDate(diff);
+  return today.toISOString().split('T')[0];
+}
+
+/**
+ * 이번 달 시작일 반환
+ */
+export function getMonthStart(): string {
+  const today = new Date(getToday());
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    '0',
+  )}-01`;
+}
+
+/**
+ * N개월 전 날짜를 반환
+ */
+export function getMonthsAgo(months: number): string {
+  const today = new Date(getToday());
+  today.setMonth(today.getMonth() - months);
+  return today.toISOString().split('T')[0];
+}
+
+/**
+ * timestamptz 쿼리를 위한 날짜 범위 반환
+ * 시작일 00:00:00 ~ 종료일 23:59:59
+ */
+export function getDateRange(
+  startDate: string,
+  endDate: string,
+): { start: string; end: string } {
+  return {
+    start: `${startDate}T00:00:00`,
+    end: `${endDate}T23:59:59`,
+  };
+}
+
+/**
+ * 하루 전체 범위 반환 (timestamptz용)
+ */
+export function getDayRange(date: string): { start: string; end: string } {
+  return getDateRange(date, date);
+}
+
+// ========== 대시보드용 함수들 ==========
+
+/**
+ * 기간별 총 매출액 계산
+ */
+async function getTotalSalesForPeriod(
+  startDate: string,
+  endDate: string,
+): Promise<number> {
+  const supabase = await createClient();
+  const range = getDateRange(startDate, endDate);
+
+  const { data } = await supabase
+    .from('menu_sales')
+    .select('total_sales')
+    .gte('sold_at', range.start)
+    .lte('sold_at', range.end);
+
+  if (!data) return 0;
+  return data.reduce((sum, row) => sum + (row.total_sales || 0), 0);
+}
+
+/**
+ * 대시보드 매출 요약 (현재 기간 + 이전 기간 비교)
+ * 어제 vs 그저께, 이번주 vs 저번주, 이번달 vs 저번달
+ */
+export async function getDashboardSalesSummary() {
+  const yesterday = getYesterday();
+  const dayBeforeYesterday = getDaysAgo(2);
+
+  // 이번 주 (7일)
+  const weekStart = getDaysAgo(7);
+  const weekEnd = yesterday;
+  // 저번 주 (14일 전 ~ 8일 전)
+  const prevWeekStart = getDaysAgo(14);
+  const prevWeekEnd = getDaysAgo(8);
+
+  // 이번 달 (30일)
+  const monthStart = getDaysAgo(30);
+  const monthEnd = yesterday;
+  // 저번 달 (60일 전 ~ 31일 전)
+  const prevMonthStart = getDaysAgo(60);
+  const prevMonthEnd = getDaysAgo(31);
+
+  const [
+    yesterdaySales,
+    dayBeforeSales,
+    weekSales,
+    prevWeekSales,
+    monthSales,
+    prevMonthSales,
+  ] = await Promise.all([
+    getTotalSalesForPeriod(yesterday, yesterday),
+    getTotalSalesForPeriod(dayBeforeYesterday, dayBeforeYesterday),
+    getTotalSalesForPeriod(weekStart, weekEnd),
+    getTotalSalesForPeriod(prevWeekStart, prevWeekEnd),
+    getTotalSalesForPeriod(monthStart, monthEnd),
+    getTotalSalesForPeriod(prevMonthStart, prevMonthEnd),
+  ]);
+
+  // 증감률 계산
+  const calcChangeRate = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
+
+  return {
+    yesterday: {
+      total: yesterdaySales,
+      change: calcChangeRate(yesterdaySales, dayBeforeSales),
+    },
+    week: {
+      total: weekSales,
+      change: calcChangeRate(weekSales, prevWeekSales),
+    },
+    month: {
+      total: monthSales,
+      change: calcChangeRate(monthSales, prevMonthSales),
+    },
+  };
+}
+
+/**
+ * 일별 매출 추이 (최근 N일)
+ */
+export async function getDailySalesTrend(days: number = 7) {
+  const supabase = await createClient();
+  const result: { date: string; total: number; count: number }[] = [];
+
+  // 각 날짜별로 매출 집계
+  for (let i = days; i >= 1; i--) {
+    const date = getDaysAgo(i);
+    const range = getDayRange(date);
+
+    const { data } = await supabase
+      .from('menu_sales')
+      .select('total_sales, sales_count')
+      .gte('sold_at', range.start)
+      .lte('sold_at', range.end);
+
+    const dayTotal =
+      data?.reduce((sum, row) => sum + (row.total_sales || 0), 0) || 0;
+    const dayCount =
+      data?.reduce((sum, row) => sum + (row.sales_count || 0), 0) || 0;
+
+    result.push({
+      date,
+      total: dayTotal,
+      count: dayCount,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * 카테고리별 매출 집계
+ */
+export async function getSalesByCategory(days: number = 30) {
+  const supabase = await createClient();
+  const startDate = getDaysAgo(days);
+  const endDate = getYesterday();
+  const range = getDateRange(startDate, endDate);
+
+  const { data, error } = await supabase
+    .from('menu_sales')
+    .select('total_sales, menus(category)')
+    .gte('sold_at', range.start)
+    .lte('sold_at', range.end);
+
+  if (error || !data) return [];
+
+  // 카테고리별 집계
+  const categoryMap = new Map<string, number>();
+
+  data.forEach(
+    (row: {
+      total_sales: number;
+      menus: { category: string } | { category: string }[] | null;
+    }) => {
+      const category = Array.isArray(row.menus)
+        ? row.menus[0]?.category
+        : row.menus?.category || '기타';
+
+      const existing = categoryMap.get(category) || 0;
+      categoryMap.set(category, existing + (row.total_sales || 0));
+    },
+  );
+
+  return Array.from(categoryMap.entries())
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
+/**
+ * 인기 메뉴 TOP N (판매 수량 기준)
+ */
+export async function getTopSellingMenus(limit: number = 5, days: number = 30) {
+  const supabase = await createClient();
+  const startDate = getDaysAgo(days);
+  const endDate = getYesterday();
+  const range = getDateRange(startDate, endDate);
+
+  const { data, error } = await supabase
+    .from('menu_sales')
+    .select('menu_id, total_sales, sales_count, menus(menu_name, category)')
+    .gte('sold_at', range.start)
+    .lte('sold_at', range.end);
+
+  if (error || !data) return [];
+
+  // 메뉴별 집계
+  const menuMap = new Map<
+    number,
+    {
+      menu_id: number;
+      menu_name: string;
+      category: string;
+      total_sales: number;
+      sales_count: number;
+    }
+  >();
+
+  data.forEach(
+    (row: {
+      menu_id: number;
+      total_sales: number;
+      sales_count: number;
+      menus:
+        | { menu_name: string; category: string }
+        | { menu_name: string; category: string }[]
+        | null;
+    }) => {
+      const existing = menuMap.get(row.menu_id);
+      const menuName = Array.isArray(row.menus)
+        ? row.menus[0]?.menu_name
+        : row.menus?.menu_name || 'Unknown';
+      const category = Array.isArray(row.menus)
+        ? row.menus[0]?.category
+        : row.menus?.category || '기타';
+
+      if (existing) {
+        existing.total_sales += row.total_sales;
+        existing.sales_count += row.sales_count;
+      } else {
+        menuMap.set(row.menu_id, {
+          menu_id: row.menu_id,
+          menu_name: menuName,
+          category,
+          total_sales: row.total_sales,
+          sales_count: row.sales_count,
+        });
+      }
+    },
+  );
+
+  return Array.from(menuMap.values())
+    .sort((a, b) => b.sales_count - a.sales_count)
+    .slice(0, limit);
+}
+
+/**
+ * 최근 입출고 내역 (최근 N건)
+ */
+export async function getRecentStockMovements(limit: number = 5): Promise<
+  {
+    id: number;
+    ingredient_name: string;
+    movement_type: string;
+    quantity: number;
+    created_at: string;
+  }[]
+> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('stock_movements')
+    .select(
+      'id, movement_type, quantity, created_at, ingredients(ingredient_name)',
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getRecentStockMovements error:', error);
+    return [];
+  }
+
+  return (data || []).map(
+    (item: {
+      id: number;
+      movement_type: string;
+      quantity: number;
+      created_at: string;
+      ingredients:
+        | { ingredient_name: string }
+        | { ingredient_name: string }[]
+        | null;
+    }) => ({
+      id: item.id,
+      movement_type: item.movement_type,
+      quantity: item.quantity,
+      created_at: item.created_at,
+      ingredient_name: Array.isArray(item.ingredients)
+        ? item.ingredients[0]?.ingredient_name
+        : item.ingredients?.ingredient_name || 'Unknown',
+    }),
+  );
+}
+
 export async function getSales() {
   const supabase = await createClient();
   const { data: sales } = await supabase
@@ -12,22 +373,33 @@ export async function getSales() {
 export async function getSalesByPeriods() {
   const supabase = await createClient();
 
+  // 날짜 계산 (현재 11월 1일 기준)
+  const yesterday = getYesterday();
+  const weekAgo = getDaysAgo(7);
+  const monthAgo = getMonthsAgo(1);
+
+  // timestamptz를 위한 날짜 범위
+  const yesterdayRange = getDayRange(yesterday);
+  const weekRange = getDateRange(weekAgo, yesterday);
+  const monthRange = getDateRange(monthAgo, yesterday);
+
   // 1. 각 기간별 전체 row를 가져옴 (limit 없이)
   const [dayRows, weekRows, monthRows] = await Promise.all([
     supabase
       .from('menu_sales')
       .select('*, menus(menu_name)')
-      .eq('sold_at', '2025-10-16'),
+      .gte('sold_at', yesterdayRange.start)
+      .lte('sold_at', yesterdayRange.end),
     supabase
       .from('menu_sales')
       .select('*, menus(menu_name)')
-      .gte('sold_at', '2025-10-10')
-      .lte('sold_at', '2025-10-16'),
+      .gte('sold_at', weekRange.start)
+      .lte('sold_at', weekRange.end),
     supabase
       .from('menu_sales')
       .select('*, menus(menu_name)')
-      .gte('sold_at', '2025-09-15')
-      .lte('sold_at', '2025-10-16'),
+      .gte('sold_at', monthRange.start)
+      .lte('sold_at', monthRange.end),
   ]);
 
   // 2. menu_id로 합산(group by) 후 total_sales 기준 상위 3개만 추출
@@ -53,7 +425,7 @@ export async function getSalesByPeriods() {
       delete item.menus;
     });
 
-    return merged.sort((a, b) => b.total_sales - a.total_sales).slice(0, 3);
+    return merged.sort((a, b) => b.total_sales - a.total_sales);
   }
 
   return {
@@ -180,14 +552,12 @@ export async function getSalesByMenu(startDate: string, endDate: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?.forEach((row: any) => {
     const existing = menuMap.get(row.menu_id);
-    const menuName =
-      Array.isArray(row.menus)
-        ? row.menus[0]?.menu_name
-        : row.menus?.menu_name || 'Unknown';
-    const category =
-      Array.isArray(row.menus)
-        ? row.menus[0]?.category
-        : row.menus?.category || 'Unknown';
+    const menuName = Array.isArray(row.menus)
+      ? row.menus[0]?.menu_name
+      : row.menus?.menu_name || 'Unknown';
+    const category = Array.isArray(row.menus)
+      ? row.menus[0]?.category
+      : row.menus?.category || 'Unknown';
 
     if (existing) {
       existing.total_sales += row.total_sales;
@@ -329,14 +699,12 @@ export async function getTopMenus(limit: number = 10) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?.forEach((row: any) => {
     const existing = menuMap.get(row.menu_id);
-    const menuName =
-      Array.isArray(row.menus)
-        ? row.menus[0]?.menu_name
-        : row.menus?.menu_name || 'Unknown';
-    const category =
-      Array.isArray(row.menus)
-        ? row.menus[0]?.category
-        : row.menus?.category || 'Unknown';
+    const menuName = Array.isArray(row.menus)
+      ? row.menus[0]?.menu_name
+      : row.menus?.menu_name || 'Unknown';
+    const category = Array.isArray(row.menus)
+      ? row.menus[0]?.category
+      : row.menus?.category || 'Unknown';
 
     if (existing) {
       existing.total_sales += row.total_sales;
@@ -657,23 +1025,16 @@ export async function deleteUserPermission(userId: string): Promise<boolean> {
 
 // 모든 설정 한번에 가져오기
 export async function getAllSettings() {
-  const [
-    business,
-    inventory,
-    recipe,
-    report,
-    notification,
-    system,
-    users,
-  ] = await Promise.all([
-    getBusinessSettings(),
-    getInventorySettings(),
-    getRecipeSettings(),
-    getReportSettings(),
-    getNotificationSettings(),
-    getSystemSettings(),
-    getUserPermissions(),
-  ]);
+  const [business, inventory, recipe, report, notification, system, users] =
+    await Promise.all([
+      getBusinessSettings(),
+      getInventorySettings(),
+      getRecipeSettings(),
+      getReportSettings(),
+      getNotificationSettings(),
+      getSystemSettings(),
+      getUserPermissions(),
+    ]);
 
   return {
     business,
@@ -736,7 +1097,11 @@ export async function upsertSalarySetting(
 }
 
 // 근무 기록 조회 (기간별)
-export async function getWorkRecords(startDate: string, endDate: string, userId?: string) {
+export async function getWorkRecords(
+  startDate: string,
+  endDate: string,
+  userId?: string,
+) {
   const supabase = await createClient();
   let query = supabase
     .from('work_records')
@@ -766,7 +1131,10 @@ export async function getWorkRecords(startDate: string, endDate: string, userId?
 
 // 근무 기록 추가/수정
 export async function upsertWorkRecord(
-  record: Partial<import('@/types').WorkRecord> & { user_id: string; work_date: string },
+  record: Partial<import('@/types').WorkRecord> & {
+    user_id: string;
+    work_date: string;
+  },
 ): Promise<boolean> {
   const supabase = await createClient();
 
@@ -775,16 +1143,16 @@ export async function upsertWorkRecord(
   if (record.clock_in && record.clock_out) {
     const clockIn = new Date(`2000-01-01T${record.clock_in}`);
     const clockOut = new Date(`2000-01-01T${record.clock_out}`);
-    workMinutes = Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000) - (record.break_minutes || 0);
+    workMinutes =
+      Math.floor((clockOut.getTime() - clockIn.getTime()) / 60000) -
+      (record.break_minutes || 0);
   }
 
-  const { error } = await supabase
-    .from('work_records')
-    .upsert({
-      ...record,
-      work_minutes: workMinutes,
-      updated_at: new Date().toISOString(),
-    });
+  const { error } = await supabase.from('work_records').upsert({
+    ...record,
+    work_minutes: workMinutes,
+    updated_at: new Date().toISOString(),
+  });
 
   if (error) {
     console.error('upsertWorkRecord error:', error);
@@ -796,10 +1164,7 @@ export async function upsertWorkRecord(
 // 근무 기록 삭제
 export async function deleteWorkRecord(id: number): Promise<boolean> {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from('work_records')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('work_records').delete().eq('id', id);
 
   if (error) {
     console.error('deleteWorkRecord error:', error);
@@ -874,7 +1239,9 @@ export async function calculateAndCreatePayroll(
 
   const hourlyRate = salarySetting.hourly_rate || 9860;
   const basePay = Math.floor((totalWorkMinutes / 60) * hourlyRate);
-  const overtimePay = Math.floor((overtimeMinutes / 60) * hourlyRate * (salarySetting.overtime_rate || 1.5));
+  const overtimePay = Math.floor(
+    (overtimeMinutes / 60) * hourlyRate * (salarySetting.overtime_rate || 1.5),
+  );
   const netPay = basePay + overtimePay;
 
   // 4. 급여 내역 저장
