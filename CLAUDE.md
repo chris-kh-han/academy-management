@@ -18,6 +18,7 @@ pnpm start    # Start production server
 ## Architecture
 
 ### Tech Stack
+
 - **Framework**: Next.js 16 with App Router and React Compiler enabled
 - **Auth**: Clerk (`@clerk/nextjs`)
 - **Database**: Supabase with SSR client
@@ -26,6 +27,7 @@ pnpm start    # Start production server
 - **Charts**: Recharts for dashboard visualizations
 
 ### Project Structure
+
 ```
 src/
 ├── app/                    # Next.js App Router pages
@@ -52,10 +54,12 @@ src/
 ### Key Patterns
 
 **Supabase Clients** (`src/utils/supabase/server.ts`):
+
 - `createClient()` - Cookie-based client for authenticated requests
 - `createServiceRoleClient()` - Admin client with service role key (server-only)
 
 **Data Fetching** (`src/utils/supabase/supabase.ts`):
+
 - Server-side async functions called from page components
 - Pages use `export const dynamic = 'force-dynamic'` or `revalidate = 0` for fresh data
 
@@ -64,14 +68,17 @@ src/
 **Path Aliases**: `@/*` maps to `./src/*`
 
 ### Database Tables (Supabase)
+
 - `menus` - Menu items
 - `menu_sales` - Sales records with menu references
 - `menu_recipes` - Recipe ingredients per menu
 - `ingredients` - Inventory items
 
 ### Environment Variables
+
 Required in `.env.local`:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- Clerk keys (NEXT_PUBLIC_CLERK_*)
+- Clerk keys (NEXT*PUBLIC_CLERK*\*)
