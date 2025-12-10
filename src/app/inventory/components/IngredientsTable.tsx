@@ -36,47 +36,46 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-const data: Payment[] = [
-  {
-    id: 'm5gr84i9',
-    amount: 316,
-    status: 'success',
-    email: 'ken99@example.com',
-  },
-  {
-    id: '3u1reuv4',
-    amount: 242,
-    status: 'success',
-    email: 'Abe45@example.com',
-  },
-  {
-    id: 'derv1ws0',
-    amount: 837,
-    status: 'processing',
-    email: 'Monserrat44@example.com',
-  },
-  {
-    id: '5kma53ae',
-    amount: 874,
-    status: 'success',
-    email: 'Silas22@example.com',
-  },
-  {
-    id: 'bhqecj4p',
-    amount: 721,
-    status: 'failed',
-    email: 'carmella@example.com',
-  },
-];
-
-export type Payment = {
+export type Ingredient = {
   id: string;
-  amount: number;
-  status: 'pending' | 'processing' | 'success' | 'failed';
-  email: string;
+  ingredient_id: string;
+  ingredient_name: string;
+  category: string;
+  unit: string;
+  price: number;
+  current_qty: number;
+  reorder_point: number | null;
+  safety_stock: number | null;
 };
 
-export const columns: ColumnDef<Payment>[] = [
+// 재고 상태 계산
+function getStockStatus(
+  currentQty: number,
+  reorderPoint: number | null,
+  safetyStock: number | null,
+): { label: string; className: string } {
+  const reorder = reorderPoint ?? 10;
+  const safety = safetyStock ?? 0;
+
+  if (currentQty <= safety) {
+    return { label: '위험', className: 'bg-red-100 text-red-700' };
+  }
+  if (currentQty <= reorder) {
+    return { label: '부족', className: 'bg-orange-100 text-orange-700' };
+  }
+  return { label: '정상', className: 'bg-green-100 text-green-700' };
+}
+
+// 숫자 포맷 (원화)
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+export const columns: ColumnDef<Ingredient>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -99,74 +98,121 @@ export const columns: ColumnDef<Payment>[] = [
     enableSorting: false,
     enableHiding: false,
   },
-
   {
-    accessorKey: 'name',
-    header: '이름',
-    cell: ({ row }) => <div className='capitalize'>{row.getValue('name')}</div>,
-  },
-
-  {
-    accessorKey: 'status',
-    header: 'Status',
+    accessorKey: 'ingredient_name',
+    header: ({ column }) => (
+      <Button
+        variant='ghost'
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        재료명
+        <ArrowUpDown className='ml-2 h-4 w-4' />
+      </Button>
+    ),
     cell: ({ row }) => (
-      <div className='capitalize'>{row.getValue('status')}</div>
+      <div className='font-medium'>{row.getValue('ingredient_name')}</div>
     ),
   },
   {
-    accessorKey: 'email',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant='ghost'
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Email
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className='lowercase'>{row.getValue('email')}</div>,
+    accessorKey: 'category',
+    header: '카테고리',
+    cell: ({ row }) => (
+      <div className='capitalize'>{row.getValue('category') || '-'}</div>
+    ),
   },
   {
-    accessorKey: 'amount',
-    header: () => <div className='text-right'>Amount</div>,
+    accessorKey: 'current_qty',
+    header: ({ column }) => (
+      <Button
+        variant='ghost'
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        현재 재고
+        <ArrowUpDown className='ml-2 h-4 w-4' />
+      </Button>
+    ),
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('amount'));
-
-      // Format the amount as a dollar amount
-      const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-      }).format(amount);
-
-      return <div className='text-right font-medium'>{formatted}</div>;
+      const qty = row.getValue('current_qty') as number;
+      const unit = row.original.unit || '';
+      return (
+        <div className='text-right'>
+          {qty} {unit}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'reorder_point',
+    header: '재주문점',
+    cell: ({ row }) => {
+      const reorderPoint = row.getValue('reorder_point') as number | null;
+      const unit = row.original.unit || '';
+      return (
+        <div className='text-right'>
+          {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
+        </div>
+      );
+    },
+  },
+  {
+    id: 'status',
+    header: '상태',
+    cell: ({ row }) => {
+      const status = getStockStatus(
+        row.original.current_qty,
+        row.original.reorder_point,
+        row.original.safety_stock,
+      );
+      return (
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${status.className}`}
+        >
+          {status.label}
+        </span>
+      );
+    },
+  },
+  {
+    accessorKey: 'price',
+    header: () => <div className='text-right'>단가</div>,
+    cell: ({ row }) => {
+      const price = row.getValue('price') as number;
+      return (
+        <div className='text-right font-medium'>
+          {price ? formatCurrency(price) : '-'}
+        </div>
+      );
     },
   },
   {
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
-      const payment = row.original;
+      const ingredient = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>Open menu</span>
+              <span className='sr-only'>메뉴 열기</span>
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuLabel>작업</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(payment.id)}
+              onClick={() =>
+                navigator.clipboard.writeText(ingredient.ingredient_id)
+              }
             >
-              Copy payment ID
+              ID 복사
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
+            <DropdownMenuItem>수정</DropdownMenuItem>
+            <DropdownMenuItem>입고 등록</DropdownMenuItem>
+            <DropdownMenuItem>출고 등록</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className='text-red-600'>삭제</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -174,7 +220,11 @@ export const columns: ColumnDef<Payment>[] = [
   },
 ];
 
-export function DataTableDemo() {
+type IngredientsTableProps = {
+  data: Ingredient[];
+};
+
+export function IngredientsTable({ data }: IngredientsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -206,17 +256,20 @@ export function DataTableDemo() {
     <div className='w-full'>
       <div className='flex items-center py-4'>
         <Input
-          placeholder='Filter emails...'
-          value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
+          placeholder='재료명 검색...'
+          value={
+            (table.getColumn('ingredient_name')?.getFilterValue() as string) ??
+            ''
+          }
           onChange={(event) =>
-            table.getColumn('email')?.setFilterValue(event.target.value)
+            table.getColumn('ingredient_name')?.setFilterValue(event.target.value)
           }
           className='max-w-sm'
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant='outline' className='ml-auto'>
-              Columns <ChevronDown />
+              컬럼 <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
@@ -224,16 +277,23 @@ export function DataTableDemo() {
               .getAllColumns()
               .filter((column) => column.getCanHide())
               .map((column) => {
+                const columnNames: Record<string, string> = {
+                  ingredient_name: '재료명',
+                  category: '카테고리',
+                  current_qty: '현재 재고',
+                  reorder_point: '재주문점',
+                  status: '상태',
+                  price: '단가',
+                };
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
-                    className='capitalize'
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) =>
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.id}
+                    {columnNames[column.id] || column.id}
                   </DropdownMenuCheckboxItem>
                 );
               })}
@@ -283,7 +343,7 @@ export function DataTableDemo() {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  등록된 재료가 없습니다.
                 </TableCell>
               </TableRow>
             )}
@@ -292,8 +352,8 @@ export function DataTableDemo() {
       </div>
       <div className='flex items-center justify-end space-x-2 py-4'>
         <div className='text-muted-foreground flex-1 text-sm'>
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {table.getFilteredSelectedRowModel().rows.length} /{' '}
+          {table.getFilteredRowModel().rows.length} 개 선택됨
         </div>
         <div className='space-x-2'>
           <Button
@@ -302,7 +362,7 @@ export function DataTableDemo() {
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            이전
           </Button>
           <Button
             variant='outline'
@@ -310,7 +370,7 @@ export function DataTableDemo() {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            다음
           </Button>
         </div>
       </div>
