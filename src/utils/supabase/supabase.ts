@@ -176,31 +176,49 @@ export async function getDashboardSalesSummary() {
 
 /**
  * 일별 매출 추이 (최근 N일)
+ * 최적화: 한 번의 쿼리로 전체 기간 데이터를 가져온 후 그룹핑
  */
 export async function getDailySalesTrend(days: number = 7) {
   const supabase = await createClient();
-  const result: { date: string; total: number; count: number }[] = [];
+  const startDate = getDaysAgo(days);
+  const endDate = getYesterday();
+  const range = getDateRange(startDate, endDate);
 
-  // 각 날짜별로 매출 집계
+  // 한 번의 쿼리로 전체 기간 데이터 가져오기
+  const { data } = await supabase
+    .from('menu_sales')
+    .select('total_sales, sales_count, sold_at')
+    .gte('sold_at', range.start)
+    .lte('sold_at', range.end);
+
+  // 날짜별로 그룹핑
+  const dailyMap = new Map<string, { total: number; count: number }>();
+
+  // 모든 날짜 초기화 (데이터가 없는 날도 포함)
   for (let i = days; i >= 1; i--) {
     const date = getDaysAgo(i);
-    const range = getDayRange(date);
+    dailyMap.set(date, { total: 0, count: 0 });
+  }
 
-    const { data } = await supabase
-      .from('menu_sales')
-      .select('total_sales, sales_count')
-      .gte('sold_at', range.start)
-      .lte('sold_at', range.end);
+  // 데이터 집계
+  data?.forEach((row) => {
+    const date = row.sold_at.split('T')[0]; // YYYY-MM-DD 추출
+    const existing = dailyMap.get(date);
+    if (existing) {
+      existing.total += row.total_sales || 0;
+      existing.count += row.sales_count || 0;
+    }
+  });
 
-    const dayTotal =
-      data?.reduce((sum, row) => sum + (row.total_sales || 0), 0) || 0;
-    const dayCount =
-      data?.reduce((sum, row) => sum + (row.sales_count || 0), 0) || 0;
-
+  // 결과 배열로 변환 (날짜 순서 유지)
+  const result: { date: string; total: number; count: number }[] = [];
+  for (let i = days; i >= 1; i--) {
+    const date = getDaysAgo(i);
+    const dayData = dailyMap.get(date) || { total: 0, count: 0 };
     result.push({
       date,
-      total: dayTotal,
-      count: dayCount,
+      total: dayData.total,
+      count: dayData.count,
     });
   }
 
