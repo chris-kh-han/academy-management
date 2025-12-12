@@ -133,6 +133,38 @@ export type WorkRecord = {
 
 export type PayrollStatus = 'draft' | 'confirmed' | 'paid';
 
+// 재고 이동 관련 타입
+export type MovementType = 'in' | 'out' | 'waste' | 'adjustment';
+
+export type StockMovement = {
+  id?: number;
+  ingredient_id: number;
+  movement_type: MovementType;
+  quantity: number;
+  unit_price?: number;
+  total_price?: number;
+  reason?: string;
+  reference_no?: string;
+  supplier?: string;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  ingredient_name?: string;
+  ingredient_unit?: string;
+};
+
+export type StockMovementInput = {
+  ingredient_id: number;
+  movement_type: MovementType;
+  quantity: number;
+  unit_price?: number;
+  reason?: string;
+  reference_no?: string;
+  supplier?: string;
+  note?: string;
+};
+
 export type Payroll = {
   id?: number;
   user_id: string;

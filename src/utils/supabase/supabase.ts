@@ -787,7 +787,7 @@ export async function getStockMovementsSummary(
   return summary;
 }
 
-// ========== Settings 페이지용 함수들 ==========
+// ========== 재고 이동 CRUD 함수들 ==========
 
 import type {
   BusinessSettings,
@@ -797,7 +797,246 @@ import type {
   NotificationSettings,
   SystemSettings,
   UserPermission,
+  StockMovement,
+  StockMovementInput,
 } from '@/types';
+
+// 재고 이동 내역 조회 (페이지네이션, 필터링 지원)
+export async function getStockMovementsPaginated(options?: {
+  page?: number;
+  limit?: number;
+  movementType?: string;
+  ingredientId?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<{ data: StockMovement[]; total: number }> {
+  const supabase = await createClient();
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 20;
+  const offset = (page - 1) * limit;
+
+  let query = supabase
+    .from('stock_movements')
+    .select('*, ingredients(ingredient_name, unit)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (options?.movementType) {
+    query = query.eq('movement_type', options.movementType);
+  }
+  if (options?.ingredientId) {
+    query = query.eq('ingredient_id', options.ingredientId);
+  }
+  if (options?.startDate) {
+    query = query.gte('created_at', options.startDate);
+  }
+  if (options?.endDate) {
+    query = query.lte('created_at', options.endDate);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('getStockMovementsPaginated error:', error);
+    return { data: [], total: 0 };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formattedData: StockMovement[] = (data || []).map((item: any) => ({
+    id: item.id,
+    ingredient_id: item.ingredient_id,
+    movement_type: item.movement_type,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.total_price,
+    reason: item.reason,
+    reference_no: item.reference_no,
+    supplier: item.supplier,
+    note: item.note,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    ingredient_name: Array.isArray(item.ingredients)
+      ? item.ingredients[0]?.ingredient_name
+      : item.ingredients?.ingredient_name,
+    ingredient_unit: Array.isArray(item.ingredients)
+      ? item.ingredients[0]?.unit
+      : item.ingredients?.unit,
+  }));
+
+  return { data: formattedData, total: count || 0 };
+}
+
+// 재고 이동 등록 (입고/출고/폐기/조정)
+export async function createStockMovement(
+  input: StockMovementInput,
+): Promise<{ success: boolean; data?: StockMovement; error?: string }> {
+  const supabase = await createClient();
+
+  // 총 금액 계산
+  const totalPrice = input.unit_price
+    ? input.quantity * input.unit_price
+    : undefined;
+
+  const { data, error } = await supabase
+    .from('stock_movements')
+    .insert({
+      ingredient_id: input.ingredient_id,
+      movement_type: input.movement_type,
+      quantity: input.quantity,
+      unit_price: input.unit_price,
+      total_price: totalPrice,
+      reason: input.reason,
+      reference_no: input.reference_no,
+      supplier: input.supplier,
+      note: input.note,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createStockMovement error:', error);
+    return { success: false, error: error.message };
+  }
+
+  // 재고 수량 업데이트
+  const quantityChange =
+    input.movement_type === 'in'
+      ? input.quantity
+      : input.movement_type === 'adjustment'
+        ? input.quantity // 조정은 입력값 그대로 (양수면 증가, 음수면 감소)
+        : -input.quantity; // out, waste는 감소
+
+  const { error: updateError } = await supabase.rpc('update_ingredient_stock', {
+    p_ingredient_id: input.ingredient_id,
+    p_quantity_change: quantityChange,
+  });
+
+  // RPC가 없으면 직접 업데이트
+  if (updateError) {
+    console.log('RPC not available, updating directly');
+    const { data: ingredient } = await supabase
+      .from('ingredients')
+      .select('current_qty')
+      .eq('id', input.ingredient_id)
+      .single();
+
+    if (ingredient) {
+      await supabase
+        .from('ingredients')
+        .update({
+          current_qty: (ingredient.current_qty || 0) + quantityChange,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.ingredient_id);
+    }
+  }
+
+  return { success: true, data };
+}
+
+// 재고 이동 수정
+export async function updateStockMovement(
+  id: number,
+  input: Partial<StockMovementInput>,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const updateData: Record<string, unknown> = {
+    ...input,
+    updated_at: new Date().toISOString(),
+  };
+
+  // 총 금액 재계산
+  if (input.quantity !== undefined && input.unit_price !== undefined) {
+    updateData.total_price = input.quantity * input.unit_price;
+  }
+
+  const { error } = await supabase
+    .from('stock_movements')
+    .update(updateData)
+    .eq('id', id);
+
+  if (error) {
+    console.error('updateStockMovement error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// 재고 이동 삭제
+export async function deleteStockMovement(
+  id: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // 먼저 이동 내역 조회 (재고 복구용)
+  const { data: movement } = await supabase
+    .from('stock_movements')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (!movement) {
+    return { success: false, error: 'Movement not found' };
+  }
+
+  // 삭제 실행
+  const { error } = await supabase.from('stock_movements').delete().eq('id', id);
+
+  if (error) {
+    console.error('deleteStockMovement error:', error);
+    return { success: false, error: error.message };
+  }
+
+  // 재고 수량 복구 (삭제된 이동의 반대 방향)
+  const quantityRestore =
+    movement.movement_type === 'in'
+      ? -movement.quantity
+      : movement.movement_type === 'adjustment'
+        ? -movement.quantity
+        : movement.quantity;
+
+  const { data: ingredient } = await supabase
+    .from('ingredients')
+    .select('current_qty')
+    .eq('id', movement.ingredient_id)
+    .single();
+
+  if (ingredient) {
+    await supabase
+      .from('ingredients')
+      .update({
+        current_qty: (ingredient.current_qty || 0) + quantityRestore,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', movement.ingredient_id);
+  }
+
+  return { success: true };
+}
+
+// 재료별 재고 이동 내역 조회
+export async function getMovementsByIngredient(
+  ingredientId: number,
+  limit: number = 10,
+): Promise<StockMovement[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('stock_movements')
+    .select('*')
+    .eq('ingredient_id', ingredientId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getMovementsByIngredient error:', error);
+    return [];
+  }
+
+  return data || [];
+}
 
 // 비즈니스 설정
 export async function getBusinessSettings(): Promise<BusinessSettings | null> {
