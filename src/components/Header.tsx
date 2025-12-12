@@ -4,6 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +38,11 @@ export default function Header() {
         <Image src='/next.svg' alt='logo' width={100} height={24} />
       </Link>
 
-      {/* 드롭다운 메뉴 - md 이상에서만 표시 */}
-      <div className='block md:hidden'>
-        <DropdownMenu>
+      {/* 모바일: UserButton + 드롭다운 메뉴 */}
+      <div className='flex items-center gap-2'>
+        <UserButton />
+        <div className='block md:hidden'>
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant='ghost' size='icon'>
               <Menu className='h-5 w-5' />
@@ -65,6 +69,7 @@ export default function Header() {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );

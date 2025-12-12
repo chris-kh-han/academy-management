@@ -2,12 +2,14 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
+
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+import Navbar from '@/components/Navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -43,6 +45,7 @@ export default function RootLayout({
               {children}
             </div>
           </div> */}
+          {/* <Navbar /> */}
           <div className='flex flex-col h-screen bg-[#F7F8FA]'>
             {/* 상단 헤더 영역 */}
             <Header />
