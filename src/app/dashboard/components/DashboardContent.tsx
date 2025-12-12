@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import PeriodToggle, { PERIOD_OPTIONS_7_30 } from '@/components/PeriodToggle';
 import {
   BarChart,
   Bar,
@@ -240,28 +241,11 @@ export default function DashboardContent({
                 <TrendingUp className='h-5 w-5' />
                 일별 매출 추이
               </CardTitle>
-              <div className='flex gap-1 rounded-lg bg-muted p-1'>
-                <button
-                  onClick={() => setTrendPeriod(7)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    trendPeriod === 7
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => setTrendPeriod(30)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    trendPeriod === 30
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  30일
-                </button>
-              </div>
+              <PeriodToggle
+                value={trendPeriod}
+                onChange={setTrendPeriod}
+                options={PERIOD_OPTIONS_7_30}
+              />
             </div>
             <CardDescription>최근 {trendPeriod}일간 매출</CardDescription>
           </CardHeader>
@@ -300,28 +284,11 @@ export default function DashboardContent({
                 <TrendingUp className='h-5 w-5' />
                 인기 메뉴 TOP 5
               </CardTitle>
-              <div className='flex gap-1 rounded-lg bg-muted p-1'>
-                <button
-                  onClick={() => setTopMenusPeriod(7)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    topMenusPeriod === 7
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => setTopMenusPeriod(30)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    topMenusPeriod === 30
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  30일
-                </button>
-              </div>
+              <PeriodToggle
+                value={topMenusPeriod}
+                onChange={setTopMenusPeriod}
+                options={PERIOD_OPTIONS_7_30}
+              />
             </div>
             <CardDescription>
               최근 {topMenusPeriod}일 판매 수량 기준
@@ -358,28 +325,11 @@ export default function DashboardContent({
           <CardHeader>
             <div className='flex items-center justify-between'>
               <CardTitle>카테고리별 매출</CardTitle>
-              <div className='flex gap-1 rounded-lg bg-muted p-1'>
-                <button
-                  onClick={() => handleCategoryPeriodChange(7)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    categoryPeriod === 7
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => handleCategoryPeriodChange(30)}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                    categoryPeriod === 30
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  30일
-                </button>
-              </div>
+              <PeriodToggle
+                value={categoryPeriod}
+                onChange={handleCategoryPeriodChange}
+                options={PERIOD_OPTIONS_7_30}
+              />
             </div>
             <CardDescription>
               최근 {categoryPeriod}일간 매출 비중
