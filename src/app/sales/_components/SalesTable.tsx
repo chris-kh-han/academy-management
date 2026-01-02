@@ -36,11 +36,18 @@ import {
 } from '@/components/ui/table';
 import type { MenuSale } from '@/types';
 
-// 날짜 포맷 (YYYY-MM-DD → MM/DD)
+// 날짜 포맷 (ISO → 년월일 오전/오후 시:분) - 정렬을 위해 고정폭
 const formatDate = (dateString: string) => {
   try {
-    const [, month, day] = dateString.split('-');
-    return `${month}/${day}`;
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours < 12 ? '오전' : '오후';
+    const hour12 = String(hours % 12 || 12).padStart(2, '0');
+    return `${year}년 ${month}월 ${day}일 ${ampm} ${hour12}시 ${minutes}분`;
   } catch {
     return dateString;
   }
@@ -84,7 +91,7 @@ export function SalesTable({ data, onDelete }: SalesTableProps) {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="text-sm">{formatDate(row.getValue('sold_at'))}</div>
+        <div className="text-sm tabular-nums whitespace-nowrap">{formatDate(row.getValue('sold_at'))}</div>
       ),
     },
     {
@@ -288,11 +295,25 @@ export function SalesTable({ data, onDelete }: SalesTableProps) {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="text-muted-foreground flex-1 text-sm">
-          총 {data.length}건
+      <div className="flex items-center justify-between gap-2 py-4">
+        <div className="text-muted-foreground text-sm">
+          {table.getFilteredRowModel().rows.length}건 중{' '}
+          {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
+          {Math.min(
+            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+            table.getFilteredRowModel().rows.length
+          )}
+          건 표시
         </div>
-        <div className="space-x-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            {'<<'}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -301,6 +322,9 @@ export function SalesTable({ data, onDelete }: SalesTableProps) {
           >
             이전
           </Button>
+          <span className="text-sm text-muted-foreground px-2">
+            {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -308,6 +332,14 @@ export function SalesTable({ data, onDelete }: SalesTableProps) {
             disabled={!table.getCanNextPage()}
           >
             다음
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            {'>>'}
           </Button>
         </div>
       </div>

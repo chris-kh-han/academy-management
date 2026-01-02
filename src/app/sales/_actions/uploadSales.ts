@@ -69,63 +69,6 @@ export async function saveCSVMapping(
 }
 
 /**
- * 메뉴명으로 메뉴 조회 또는 생성
- * 새 메뉴는 자동으로 생성됨
- */
-async function getOrCreateMenu(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  menuName: string,
-  branchId: string,
-  price?: number
-): Promise<{ menu_id: string; isNew: boolean } | null> {
-  // 1. 기존 메뉴 조회 (이름으로)
-  const { data: existingMenu } = await supabase
-    .from('menus')
-    .select('menu_id, price')
-    .eq('branch_id', branchId)
-    .eq('menu_name', menuName)
-    .single();
-
-  if (existingMenu) {
-    return { menu_id: existingMenu.menu_id, isNew: false };
-  }
-
-  // 2. 새 메뉴 생성
-  // menu_id 자동 생성 (M + 숫자)
-  const { data: lastMenu } = await supabase
-    .from('menus')
-    .select('menu_id')
-    .order('menu_id', { ascending: false })
-    .limit(1)
-    .single();
-
-  let nextMenuId = 'M001';
-  if (lastMenu?.menu_id) {
-    const num = parseInt(lastMenu.menu_id.replace('M', ''), 10);
-    nextMenuId = `M${String(num + 1).padStart(3, '0')}`;
-  }
-
-  const { data: newMenu, error } = await supabase
-    .from('menus')
-    .insert({
-      menu_id: nextMenuId,
-      menu_name: menuName,
-      price: price || 0,
-      branch_id: branchId,
-    })
-    .select('menu_id')
-    .single();
-
-  if (error) {
-    console.error('Create menu error:', error);
-    return null;
-  }
-
-  return { menu_id: newMenu.menu_id, isNew: true };
-}
-
-
-/**
  * DB 타임스탬프를 CSV 형식으로 정규화
  */
 function normalizeTimestamp(dbTimestamp: string): string {
@@ -205,7 +148,7 @@ export async function checkDuplicates(
 }
 
 /**
- * 판매 데이터 업로드 (메뉴명 기반, datetime으로 중복 관리)
+ * 판매 데이터 업로드 (배치 처리 - 성능 최적화)
  */
 export async function uploadSales(
   rows: SalesUploadRow[],
@@ -218,14 +161,20 @@ export async function uploadSales(
   let menusCreatedCount = 0;
 
   try {
-    // 기존 데이터 조회 (중복 체크용)
-    // 날짜 범위로 쿼리 후 JavaScript에서 필터링
-    const dates = [...new Set(rows.map(r => r.sold_at?.split(' ')[0]).filter(Boolean))];
+    // 유효한 행만 필터링
+    const validRows = rows.filter(r => r.menu_name && r.sold_at);
+    if (validRows.length === 0) {
+      return { success: true, inserted: 0, updated: 0, menusCreated: 0, errors: [] };
+    }
+
+    // 1. 기존 데이터 조회 (중복 체크용)
+    const dates = [...new Set(validRows.map(r => r.sold_at?.split(' ')[0]).filter(Boolean))];
     let existingKeys = new Set<string>();
 
     if (dates.length > 0) {
-      const minDate = dates.sort()[0];
-      const maxDate = dates.sort().reverse()[0];
+      const sortedDates = [...dates].sort();
+      const minDate = sortedDates[0];
+      const maxDate = sortedDates[sortedDates.length - 1];
 
       const { data: existingRecords } = await supabase
         .from('menu_sales')
@@ -234,98 +183,128 @@ export async function uploadSales(
         .gte('sold_at', `${minDate} 00:00:00`)
         .lte('sold_at', `${maxDate} 23:59:59`);
 
-      // 기존 레코드 키 셋 생성 (sold_at_menu_id)
-      // DB에서 타임존 정보 제거하여 비교 (예: "2025-01-02T14:30:25+00:00" → "2025-01-02 14:30:25")
       existingKeys = new Set(
-        existingRecords?.map(e => {
-          // ISO 포맷 → CSV 포맷으로 정규화
-          let normalizedSoldAt = e.sold_at || '';
-          normalizedSoldAt = normalizedSoldAt.replace(/[TZ]/g, ' ').trim();  // T,Z → 공백
-          normalizedSoldAt = normalizedSoldAt.replace(/\+\d{2}:\d{2}$/, ''); // +00:00 제거
-          normalizedSoldAt = normalizedSoldAt.replace(/\.\d{3}/, '');        // 밀리초 제거
-          normalizedSoldAt = normalizedSoldAt.trim();
-          return `${normalizedSoldAt}_${e.menu_id}`;
-        }) || []
+        existingRecords?.map(e => `${normalizeTimestamp(e.sold_at)}_${e.menu_id}`) || []
       );
     }
 
-    // 각 행 처리
-    for (const row of rows) {
-      if (!row.menu_name || !row.sold_at) {
-        errors.push(`빈 데이터: ${JSON.stringify(row)}`);
+    // 2. 메뉴 일괄 조회
+    const menuNames = [...new Set(validRows.map(r => r.menu_name.trim()))];
+    const { data: existingMenus } = await supabase
+      .from('menus')
+      .select('menu_id, menu_name, price')
+      .eq('branch_id', branchId)
+      .in('menu_name', menuNames);
+
+    const menuMap = new Map<string, { menu_id: string; price: number }>(
+      existingMenus?.map(m => [m.menu_name, { menu_id: m.menu_id, price: m.price || 0 }]) || []
+    );
+
+    // 3. 신규 메뉴 일괄 생성
+    const newMenuNames = menuNames.filter(n => !menuMap.has(n));
+    if (newMenuNames.length > 0) {
+      // 마지막 menu_id 조회
+      const { data: lastMenu } = await supabase
+        .from('menus')
+        .select('menu_id')
+        .order('menu_id', { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextNum = 1;
+      if (lastMenu?.menu_id) {
+        nextNum = parseInt(lastMenu.menu_id.replace('M', ''), 10) + 1;
+      }
+
+      // 신규 메뉴 가격 추출 (CSV에서 가져온 가격 사용)
+      const menuPriceMap = new Map<string, number>();
+      for (const row of validRows) {
+        if (row.price && !menuPriceMap.has(row.menu_name.trim())) {
+          menuPriceMap.set(row.menu_name.trim(), row.price);
+        }
+      }
+
+      const newMenuInserts = newMenuNames.map((name, idx) => ({
+        menu_id: `M${String(nextNum + idx).padStart(3, '0')}`,
+        menu_name: name,
+        price: menuPriceMap.get(name) || 0,
+        branch_id: branchId,
+      }));
+
+      const { error: menuInsertError } = await supabase
+        .from('menus')
+        .insert(newMenuInserts);
+
+      if (menuInsertError) {
+        console.error('Batch menu insert error:', menuInsertError);
+        errors.push(`메뉴 일괄 생성 실패: ${menuInsertError.message}`);
+      } else {
+        menusCreatedCount = newMenuNames.length;
+        // menuMap 업데이트
+        for (const menu of newMenuInserts) {
+          menuMap.set(menu.menu_name, { menu_id: menu.menu_id, price: menu.price });
+        }
+      }
+    }
+
+    // 4. 판매 데이터 준비
+    const salesDataArray: Array<{
+      menu_id: string;
+      branch_id: string;
+      sold_at: string;
+      sales_count: number;
+      price: number;
+      total_sales: number;
+      transaction_id: string | null;
+      updated_at: string;
+    }> = [];
+
+    const now = new Date().toISOString();
+
+    for (const row of validRows) {
+      const menuInfo = menuMap.get(row.menu_name.trim());
+      if (!menuInfo) {
+        errors.push(`메뉴 찾을 수 없음: ${row.menu_name}`);
         continue;
       }
 
-      // 메뉴 조회 또는 생성
-      const menuResult = await getOrCreateMenu(
-        supabase,
-        row.menu_name.trim(),
-        branchId,
-        row.price
-      );
+      const price = row.price || menuInfo.price;
+      const totalSales = row.total_sales || (price * (row.sales_count || 0));
 
-      if (!menuResult) {
-        errors.push(`메뉴 생성 실패: ${row.menu_name}`);
-        continue;
+      // 중복 체크
+      const recordKey = `${row.sold_at}_${menuInfo.menu_id}`;
+      if (existingKeys.has(recordKey)) {
+        updatedCount++;
+      } else {
+        insertedCount++;
       }
 
-      if (menuResult.isNew) {
-        menusCreatedCount++;
-      }
-
-      // 가격 계산 (없으면 메뉴 기본가격 사용)
-      let price = row.price;
-      let totalSales = row.total_sales;
-
-      if (!price) {
-        // 기존 메뉴 가격 조회
-        const { data: menu } = await supabase
-          .from('menus')
-          .select('price')
-          .eq('menu_id', menuResult.menu_id)
-          .single();
-        price = menu?.price || 0;
-      }
-
-      if (!totalSales && price && row.sales_count) {
-        totalSales = price * row.sales_count;
-      }
-
-      // 저장할 데이터
-      const salesData = {
-        menu_id: menuResult.menu_id,
+      salesDataArray.push({
+        menu_id: menuInfo.menu_id,
         branch_id: branchId,
         sold_at: row.sold_at,
-        sales_count: row.sales_count,
-        price: price || 0,
-        total_sales: totalSales || 0,
+        sales_count: row.sales_count || 0,
+        price: price,
+        total_sales: totalSales,
         transaction_id: row.transaction_id || null,
-        updated_at: new Date().toISOString(),
-      };
+        updated_at: now,
+      });
+    }
 
-      // 중복 여부 체크
-      const recordKey = `${row.sold_at}_${menuResult.menu_id}`;
-      const isUpdate = existingKeys.has(recordKey);
-
-      // datetime + menu + branch 기준 upsert (같은 시간의 동일 메뉴는 덮어쓰기)
+    // 5. 판매 데이터 일괄 upsert (1000개씩 청크)
+    const CHUNK_SIZE = 1000;
+    for (let i = 0; i < salesDataArray.length; i += CHUNK_SIZE) {
+      const chunk = salesDataArray.slice(i, i + CHUNK_SIZE);
       const { error: upsertError } = await supabase
         .from('menu_sales')
-        .upsert(salesData, {
+        .upsert(chunk, {
           onConflict: 'sold_at,menu_id,branch_id',
           ignoreDuplicates: false,
         });
 
       if (upsertError) {
-        console.error('Upsert error for row:', row, upsertError);
-        errors.push(
-          `${row.menu_name} (${row.sold_at}) 업로드 실패: ${upsertError.message}`,
-        );
-      } else {
-        if (isUpdate) {
-          updatedCount++;
-        } else {
-          insertedCount++;
-        }
+        console.error('Batch upsert error:', upsertError);
+        errors.push(`청크 ${Math.floor(i / CHUNK_SIZE) + 1} 업로드 실패: ${upsertError.message}`);
       }
     }
 
@@ -399,4 +378,42 @@ export async function getExistingMenuNames(branchId: string): Promise<string[]> 
  */
 export async function refreshSalesData(branchId: string): Promise<MenuSale[]> {
   return await getSalesHistory(branchId);
+}
+
+/**
+ * 날짜 범위로 판매 데이터 조회
+ */
+export async function fetchSalesByDateRange(
+  branchId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<MenuSale[]> {
+  return await getSalesHistory(branchId, startDate, endDate);
+}
+
+/**
+ * 판매 데이터가 존재하는 월 목록 조회
+ */
+export async function getAvailableMonths(branchId: string): Promise<string[]> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('menu_sales')
+    .select('sold_at')
+    .eq('branch_id', branchId)
+    .order('sold_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('getAvailableMonths error:', error);
+    return [];
+  }
+
+  // 중복 제거된 월 목록 추출 (YYYY-MM 형식)
+  const months = new Set<string>();
+  data.forEach((sale) => {
+    const month = sale.sold_at?.slice(0, 7);
+    if (month) months.add(month);
+  });
+
+  return Array.from(months).sort().reverse();
 }

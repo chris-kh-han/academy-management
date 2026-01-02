@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { SalesUpload } from './SalesUpload';
 import { CSVPreview } from './CSVPreview';
 import { SalesTable } from './SalesTable';
 import { DuplicateConfirmDialog } from './DuplicateConfirmDialog';
-import { uploadSales, deleteSale, checkDuplicates, refreshSalesData } from '../_actions/uploadSales';
+import { uploadSales, deleteSale, checkDuplicates, refreshSalesData, fetchSalesByDateRange } from '../_actions/uploadSales';
 import { useBranch } from '@/contexts/BranchContext';
 import type { SalesUploadRow, MenuSale } from '@/types';
 
@@ -20,6 +22,22 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
   const { currentBranch } = useBranch();
   const [parsedData, setParsedData] = useState<SalesUploadRow[]>([]);
   const [salesData, setSalesData] = useState<MenuSale[]>(initialSalesData);
+
+  // 날짜 필터 상태
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  // 데이터에서 존재하는 월 목록 추출
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    initialSalesData.forEach((sale) => {
+      const month = sale.sold_at?.slice(0, 7);
+      if (month) months.add(month);
+    });
+    return Array.from(months).sort().reverse();
+  }, [initialSalesData]);
 
   // 중복 확인 다이얼로그 상태
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
@@ -131,6 +149,59 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
     await performUpload(pendingUploadData);
   };
 
+  // 월별 필터 선택
+  const handleMonthSelect = async (month: string | null) => {
+    if (!currentBranch?.id) return;
+
+    setIsFiltering(true);
+    setSelectedMonth(month);
+    setStartDate('');
+    setEndDate('');
+
+    try {
+      if (month === null) {
+        // 전체 조회
+        const data = await fetchSalesByDateRange(currentBranch.id);
+        setSalesData(data);
+      } else {
+        // 해당 월의 첫째날과 마지막날 계산
+        const [year, mon] = month.split('-').map(Number);
+        const lastDay = new Date(year, mon, 0).getDate();
+        const start = `${month}-01`;
+        const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+        const data = await fetchSalesByDateRange(currentBranch.id, start, end);
+        setSalesData(data);
+      }
+    } catch (error) {
+      console.error('Month filter error:', error);
+      toast.error('데이터 조회 중 오류가 발생했습니다.');
+    } finally {
+      setIsFiltering(false);
+    }
+  };
+
+  // 기간 직접 선택 조회
+  const handleDateRangeFilter = async () => {
+    if (!currentBranch?.id) return;
+    if (!startDate || !endDate) {
+      toast.error('시작일과 종료일을 모두 선택해주세요.');
+      return;
+    }
+
+    setIsFiltering(true);
+    setSelectedMonth(null);
+
+    try {
+      const data = await fetchSalesByDateRange(currentBranch.id, startDate, endDate);
+      setSalesData(data);
+    } catch (error) {
+      console.error('Date range filter error:', error);
+      toast.error('데이터 조회 중 오류가 발생했습니다.');
+    } finally {
+      setIsFiltering(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('이 판매 내역을 삭제하시겠습니까?')) {
       return;
@@ -195,7 +266,57 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
           <CardTitle>판매 내역</CardTitle>
           <CardDescription>등록된 판매 데이터를 조회합니다</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* 월별 퀵 선택 */}
+          {availableMonths.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedMonth === null && !startDate ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleMonthSelect(null)}
+                disabled={isFiltering}
+              >
+                전체
+              </Button>
+              {availableMonths.map((month) => (
+                <Button
+                  key={month}
+                  variant={selectedMonth === month ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleMonthSelect(month)}
+                  disabled={isFiltering}
+                >
+                  {month.replace('-', '.')}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* 기간 직접 선택 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
+            />
+            <span className="text-muted-foreground">~</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleDateRangeFilter}
+              disabled={isFiltering || !startDate || !endDate}
+            >
+              {isFiltering ? '조회 중...' : '조회'}
+            </Button>
+          </div>
+
           <SalesTable data={salesData} onDelete={handleDelete} />
         </CardContent>
       </Card>

@@ -48,12 +48,22 @@ const formatCurrency = (value?: number) => {
   return new Intl.NumberFormat('ko-KR').format(value);
 };
 
+const PAGE_SIZE = 20;
+
 export function CSVPreview({ data, onConfirm, onClear }: CSVPreviewProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const validData = data.filter((row) => row.isValid);
   const invalidData = data.filter((row) => !row.isValid);
   const newMenuData = data.filter((row) => row.isNewMenu && row.isValid);
+
+  // 페이지네이션
+  const totalPages = Math.ceil(data.length / PAGE_SIZE);
+  const paginatedData = data.slice(
+    currentPage * PAGE_SIZE,
+    (currentPage + 1) * PAGE_SIZE
+  );
 
   const handleConfirm = async () => {
     if (validData.length === 0) {
@@ -97,7 +107,7 @@ export function CSVPreview({ data, onConfirm, onClear }: CSVPreviewProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((row, index) => (
+                paginatedData.map((row, index) => (
                   <TableRow
                     key={index}
                     className={
@@ -149,6 +159,53 @@ export function CSVPreview({ data, onConfirm, onClear }: CSVPreviewProps) {
             </TableBody>
           </Table>
         </div>
+
+        {/* 페이지네이션 */}
+        {data.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-2 py-3 border-t border-gray-200 dark:border-gray-800 mt-2">
+            <div className="text-muted-foreground text-sm">
+              {data.length}건 중 {currentPage * PAGE_SIZE + 1}-
+              {Math.min((currentPage + 1) * PAGE_SIZE, data.length)}건 표시
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(0)}
+                disabled={currentPage === 0}
+              >
+                {'<<'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => p - 1)}
+                disabled={currentPage === 0}
+              >
+                이전
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                {currentPage + 1} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => p + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                다음
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages - 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                {'>>'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {data.length > 0 && (
           <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
