@@ -13,7 +13,7 @@ import {
   useReactTable,
   VisibilityState,
 } from '@tanstack/react-table';
-import { ArrowUpDown, ChevronDown, Pencil } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Pencil, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EditRecipeDialog } from './EditRecipeDialog';
+import { AddMenuDialog } from './AddMenuDialog';
 
 type Ingredient = {
   ingredient_id: string;
@@ -63,12 +64,14 @@ type RecipesProps = {
     }
   >;
   allIngredients: AllIngredient[];
+  existingCategories: string[];
 };
 
-export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
+export function RecipesTable({ recipes, allIngredients, existingCategories }: RecipesProps) {
   const [editingRecipe, setEditingRecipe] = React.useState<RecipeRow | null>(
     null,
   );
+  const [addMenuOpen, setAddMenuOpen] = React.useState(false);
 
   const data: RecipeRow[] = React.useMemo(() => {
     return Object.entries(recipes).map(([menuId, value]) => ({
@@ -184,7 +187,7 @@ export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
 
   return (
     <div className='w-full'>
-      <div className='flex items-center py-4'>
+      <div className='flex items-center py-4 gap-2'>
         <Input
           placeholder='메뉴 이름 검색...'
           value={
@@ -195,12 +198,17 @@ export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
           }
           className='max-w-sm'
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='outline' className='ml-auto'>
-              Columns <ChevronDown />
-            </Button>
-          </DropdownMenuTrigger>
+        <div className='ml-auto flex items-center gap-2'>
+          <Button onClick={() => setAddMenuOpen(true)}>
+            <Plus className='h-4 w-4 mr-1' />
+            메뉴 추가
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline'>
+                Columns <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
             {table
               .getAllColumns()
@@ -220,7 +228,8 @@ export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
                 );
               })}
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
       <div className='overflow-hidden rounded-md border bg-white'>
         <Table>
@@ -307,6 +316,12 @@ export function RecipesTable({ recipes, allIngredients }: RecipesProps) {
           allIngredients={allIngredients}
         />
       )}
+
+      <AddMenuDialog
+        open={addMenuOpen}
+        onOpenChange={setAddMenuOpen}
+        allIngredients={allIngredients}
+      />
     </div>
   );
 }

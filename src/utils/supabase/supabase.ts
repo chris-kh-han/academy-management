@@ -1,5 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
-import type { Sale } from '@/types';
+import { createServiceRoleClient } from '@/utils/supabase/server';
+import type { Sale, UserContext, Branch } from '@/types';
 
 // ========== 날짜 유틸리티 함수들 ==========
 
@@ -101,7 +101,7 @@ async function getTotalSalesForPeriod(
   startDate: string,
   endDate: string,
 ): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const range = getDateRange(startDate, endDate);
 
   const { data } = await supabase
@@ -179,7 +179,7 @@ export async function getDashboardSalesSummary() {
  * 최적화: 한 번의 쿼리로 전체 기간 데이터를 가져온 후 그룹핑
  */
 export async function getDailySalesTrend(days: number = 7) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const startDate = getDaysAgo(days);
   const endDate = getYesterday();
   const range = getDateRange(startDate, endDate);
@@ -229,7 +229,7 @@ export async function getDailySalesTrend(days: number = 7) {
  * 카테고리별 매출 집계
  */
 export async function getSalesByCategory(days: number = 30) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const startDate = getDaysAgo(days);
   const endDate = getYesterday();
   const range = getDateRange(startDate, endDate);
@@ -268,7 +268,7 @@ export async function getSalesByCategory(days: number = 30) {
  * 인기 메뉴 TOP N (판매 수량 기준)
  */
 export async function getTopSellingMenus(limit: number = 5, days: number = 30) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const startDate = getDaysAgo(days);
   const endDate = getYesterday();
   const range = getDateRange(startDate, endDate);
@@ -343,7 +343,7 @@ export async function getRecentStockMovements(limit: number = 5): Promise<
     created_at: string;
   }[]
 > {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('stock_movements')
@@ -381,7 +381,7 @@ export async function getRecentStockMovements(limit: number = 5): Promise<
 }
 
 export async function getSales() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data: sales } = await supabase
     .from('menu_sales')
     .select('*, menus(menu_name)');
@@ -389,7 +389,7 @@ export async function getSales() {
 }
 
 export async function getSalesByPeriods() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 날짜 계산 (현재 11월 1일 기준)
   const yesterday = getYesterday();
@@ -454,13 +454,13 @@ export async function getSalesByPeriods() {
 }
 
 export async function getAllIngredients() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data: ingredients } = await supabase.from('ingredients').select('*');
   return ingredients;
 }
 
 export async function getAllRecipes() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data: recipes, error } = await supabase
     .from('menu_recipes')
     .select(
@@ -498,7 +498,7 @@ export async function getAllRecipes() {
 // }
 
 export async function fetchMenuRecipeIngredients(menuId: string) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('menu_recipes')
@@ -523,7 +523,7 @@ export async function fetchMenuRecipeIngredients(menuId: string) {
 
 // 1. 매출 리포트 - 기간별 매출 요약
 export async function getSalesReport(startDate: string, endDate: string) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('menu_sales')
@@ -542,7 +542,7 @@ export async function getSalesReport(startDate: string, endDate: string) {
 
 // 메뉴별 매출 집계
 export async function getSalesByMenu(startDate: string, endDate: string) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('menu_sales')
@@ -598,7 +598,7 @@ export async function getSalesByMenu(startDate: string, endDate: string) {
 
 // 2. 재고 리포트 - 현재 재고 현황
 export async function getInventoryReport() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('ingredients')
@@ -615,7 +615,7 @@ export async function getInventoryReport() {
 
 // 재고 부족 재료 (임계치 이하)
 export async function getLowStockIngredients(threshold: number = 10) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('ingredients')
@@ -633,7 +633,7 @@ export async function getLowStockIngredients(threshold: number = 10) {
 
 // 3. 레시피/메뉴 분석 - 메뉴 목록과 원가 정보
 export async function getMenuAnalysis() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 메뉴 정보 가져오기
   const { data: menus, error: menuError } = await supabase
@@ -691,7 +691,7 @@ export async function getMenuAnalysis() {
 
 // 인기 메뉴 Top N
 export async function getTopMenus(limit: number = 10) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('menu_sales')
@@ -745,7 +745,7 @@ export async function getTopMenus(limit: number = 10) {
 
 // 4. 재고 이동 내역
 export async function getStockMovements(startDate?: string, endDate?: string) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let query = supabase
     .from('stock_movements')
@@ -828,7 +828,7 @@ export async function getStockMovementsPaginated(options?: {
   startDate?: string;
   endDate?: string;
 }): Promise<{ data: StockMovement[]; total: number }> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const page = options?.page ?? 1;
   const limit = options?.limit ?? 20;
   const offset = (page - 1) * limit;
@@ -888,7 +888,7 @@ export async function getStockMovementsPaginated(options?: {
 export async function createStockMovement(
   input: StockMovementInput,
 ): Promise<{ success: boolean; data?: StockMovement; error?: string }> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 총 금액 계산
   const totalPrice = input.unit_price
@@ -957,7 +957,7 @@ export async function updateStockMovement(
   id: number,
   input: Partial<StockMovementInput>,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const updateData: Record<string, unknown> = {
     ...input,
@@ -986,7 +986,7 @@ export async function updateStockMovement(
 export async function deleteStockMovement(
   id: number,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 먼저 이동 내역 조회 (재고 복구용)
   const { data: movement } = await supabase
@@ -1039,7 +1039,7 @@ export async function getMovementsByIngredient(
   ingredientId: number,
   limit: number = 10,
 ): Promise<StockMovement[]> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('stock_movements')
@@ -1058,7 +1058,7 @@ export async function getMovementsByIngredient(
 
 // 비즈니스 설정
 export async function getBusinessSettings(): Promise<BusinessSettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('business_settings')
     .select('*')
@@ -1074,7 +1074,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings | null> {
 export async function updateBusinessSettings(
   settings: Partial<BusinessSettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('business_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1088,7 +1088,7 @@ export async function updateBusinessSettings(
 
 // 재고 설정
 export async function getInventorySettings(): Promise<InventorySettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('inventory_settings')
     .select('*')
@@ -1104,7 +1104,7 @@ export async function getInventorySettings(): Promise<InventorySettings | null> 
 export async function updateInventorySettings(
   settings: Partial<InventorySettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('inventory_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1118,7 +1118,7 @@ export async function updateInventorySettings(
 
 // 레시피 설정
 export async function getRecipeSettings(): Promise<RecipeSettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('recipe_settings')
     .select('*')
@@ -1134,7 +1134,7 @@ export async function getRecipeSettings(): Promise<RecipeSettings | null> {
 export async function updateRecipeSettings(
   settings: Partial<RecipeSettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('recipe_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1148,7 +1148,7 @@ export async function updateRecipeSettings(
 
 // 리포트 설정
 export async function getReportSettings(): Promise<ReportSettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('report_settings')
     .select('*')
@@ -1164,7 +1164,7 @@ export async function getReportSettings(): Promise<ReportSettings | null> {
 export async function updateReportSettings(
   settings: Partial<ReportSettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('report_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1178,7 +1178,7 @@ export async function updateReportSettings(
 
 // 알림 설정
 export async function getNotificationSettings(): Promise<NotificationSettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('notification_settings')
     .select('*')
@@ -1194,7 +1194,7 @@ export async function getNotificationSettings(): Promise<NotificationSettings | 
 export async function updateNotificationSettings(
   settings: Partial<NotificationSettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('notification_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1208,7 +1208,7 @@ export async function updateNotificationSettings(
 
 // 시스템 설정
 export async function getSystemSettings(): Promise<SystemSettings | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('system_settings')
     .select('*')
@@ -1224,7 +1224,7 @@ export async function getSystemSettings(): Promise<SystemSettings | null> {
 export async function updateSystemSettings(
   settings: Partial<SystemSettings>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('system_settings')
     .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() });
@@ -1238,7 +1238,7 @@ export async function updateSystemSettings(
 
 // 사용자 권한 관리
 export async function getUserPermissions(): Promise<UserPermission[]> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('user_permissions')
     .select('*')
@@ -1254,7 +1254,7 @@ export async function getUserPermissions(): Promise<UserPermission[]> {
 export async function updateUserPermission(
   permission: Partial<UserPermission> & { user_id: string },
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('user_permissions')
     .upsert({ ...permission, updated_at: new Date().toISOString() });
@@ -1267,7 +1267,7 @@ export async function updateUserPermission(
 }
 
 export async function deleteUserPermission(userId: string): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('user_permissions')
     .delete()
@@ -1308,7 +1308,7 @@ export async function getAllSettings() {
 
 // 급여 설정 조회
 export async function getSalarySettings() {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('salary_settings')
     .select('*, user_permissions(user_name, user_email)')
@@ -1323,7 +1323,7 @@ export async function getSalarySettings() {
 
 // 특정 사용자 급여 설정 조회
 export async function getSalarySettingByUserId(userId: string) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from('salary_settings')
     .select('*')
@@ -1341,7 +1341,7 @@ export async function getSalarySettingByUserId(userId: string) {
 export async function upsertSalarySetting(
   setting: Partial<import('@/types').SalarySetting> & { user_id: string },
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('salary_settings')
     .upsert({ ...setting, updated_at: new Date().toISOString() });
@@ -1359,7 +1359,7 @@ export async function getWorkRecords(
   endDate: string,
   userId?: string,
 ) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   let query = supabase
     .from('work_records')
     .select('*, user_permissions(user_name, user_email)')
@@ -1393,7 +1393,7 @@ export async function upsertWorkRecord(
     work_date: string;
   },
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 근무 시간 계산
   let workMinutes = 0;
@@ -1420,7 +1420,7 @@ export async function upsertWorkRecord(
 
 // 근무 기록 삭제
 export async function deleteWorkRecord(id: number): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase.from('work_records').delete().eq('id', id);
 
   if (error) {
@@ -1432,7 +1432,7 @@ export async function deleteWorkRecord(id: number): Promise<boolean> {
 
 // 급여 내역 조회
 export async function getPayrolls(year: number, month?: number) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   let startDate: string;
   let endDate: string;
@@ -1472,7 +1472,7 @@ export async function calculateAndCreatePayroll(
   periodStart: string,
   periodEnd: string,
 ): Promise<import('@/types').Payroll | null> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 1. 급여 설정 가져오기
   const salarySetting = await getSalarySettingByUserId(userId);
@@ -1539,7 +1539,7 @@ export async function updatePayrollStatus(
   status: import('@/types').PayrollStatus,
   paidAt?: string,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from('payroll')
     .update({
@@ -1554,4 +1554,382 @@ export async function updatePayrollStatus(
     return false;
   }
   return true;
+}
+
+// ========== 사용자 컨텍스트 관련 함수들 ==========
+
+// 사용자 컨텍스트 조회
+export async function getUserContext(userId: string): Promise<UserContext> {
+  const supabase = createServiceRoleClient();
+
+  // 1. 사용자의 지점 멤버십 조회
+  const { data: branchMembers } = await supabase
+    .from('branch_members')
+    .select('*, branches(*)')
+    .eq('user_id', userId);
+
+  // 2. 사용 가능한 지점 목록
+  const availableBranches: Branch[] =
+    branchMembers?.map((m) => m.branches).filter(Boolean) || [];
+
+  // 3. 기본 지점 찾기 (is_default가 true인 것)
+  const defaultMember = branchMembers?.find((m) => m.is_default);
+  const currentBranch = defaultMember?.branches || availableBranches[0];
+
+  // 4. 현재 브랜드 조회
+  let currentBrand = undefined;
+  if (currentBranch?.brand_id) {
+    const { data: brand } = await supabase
+      .from('brands')
+      .select('*')
+      .eq('id', currentBranch.brand_id)
+      .single();
+    currentBrand = brand;
+  }
+
+  return {
+    userId,
+    currentBrand,
+    currentBranch,
+    userRole: defaultMember?.role,
+    availableBranches,
+  };
+}
+
+// 기본 지점 설정 (지점 전환)
+export async function setDefaultBranch(
+  userId: string,
+  branchId: string,
+): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+
+  // 1. 기존 기본 지점 해제
+  await supabase
+    .from('branch_members')
+    .update({ is_default: false })
+    .eq('user_id', userId);
+
+  // 2. 새 기본 지점 설정
+  const { error } = await supabase
+    .from('branch_members')
+    .update({ is_default: true })
+    .eq('user_id', userId)
+    .eq('branch_id', branchId);
+
+  if (error) {
+    console.error('setDefaultBranch error:', error);
+    return false;
+  }
+
+  return true;
+}
+
+// 메뉴 카테고리 목록 조회 (해당 지점의 기존 카테고리들)
+export async function getMenuCategories(branchId?: string): Promise<string[]> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase.from('menus').select('category');
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getMenuCategories error:', error);
+    return [];
+  }
+
+  // DISTINCT 처리 및 빈 값 제외
+  const categories = [
+    ...new Set(
+      data?.map((item) => item.category).filter((cat): cat is string => !!cat),
+    ),
+  ];
+
+  return categories.sort();
+}
+
+// 모든 메뉴 정보 조회 (메뉴판 UI용)
+export async function getAllMenus(branchId?: string) {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menus')
+    .select('menu_id, menu_name, category, category_id, price, image_url')
+    .order('category', { ascending: true })
+    .order('menu_name', { ascending: true });
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getAllMenus error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// 모든 메뉴 옵션 조회 (메뉴판 UI용)
+export async function getAllMenuOptions(branchId?: string) {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menu_options')
+    .select('option_id, option_name, option_category, additional_price, image_url, is_active')
+    .eq('is_active', true)
+    .order('option_category', { ascending: true })
+    .order('option_name', { ascending: true });
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getAllMenuOptions error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// ========== 메뉴 카테고리 CRUD 함수들 ==========
+
+import type { MenuCategory, MenuCategoryInput } from '@/types';
+
+// 모든 메뉴 카테고리 조회
+export async function getAllMenuCategories(
+  branchId?: string,
+): Promise<MenuCategory[]> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menu_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true });
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getAllMenuCategories error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// 카테고리 생성
+export async function createMenuCategory(
+  input: MenuCategoryInput,
+): Promise<{ success: boolean; data?: MenuCategory; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('menu_categories')
+    .insert({
+      ...input,
+      is_active: input.is_active ?? true,
+      sort_order: input.sort_order ?? 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createMenuCategory error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data };
+}
+
+// 카테고리 수정
+export async function updateMenuCategory(
+  id: string,
+  input: Partial<MenuCategoryInput>,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('menu_categories')
+    .update({
+      ...input,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('updateMenuCategory error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// 카테고리 삭제 (실제로는 is_active를 false로 설정)
+export async function deleteMenuCategory(
+  id: string,
+): Promise<{ success: boolean; error?: string; hasMenus?: boolean }> {
+  const supabase = createServiceRoleClient();
+
+  // 1. 해당 카테고리에 메뉴가 있는지 확인
+  const { data: menus } = await supabase
+    .from('menus')
+    .select('menu_id')
+    .eq('category_id', id)
+    .limit(1);
+
+  if (menus && menus.length > 0) {
+    return {
+      success: false,
+      hasMenus: true,
+      error: '카테고리에 메뉴가 있어서 삭제할 수 없습니다.',
+    };
+  }
+
+  // 2. 소프트 삭제 (is_active = false)
+  const { error } = await supabase
+    .from('menu_categories')
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('deleteMenuCategory error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// 카테고리별 메뉴 개수 조회
+export async function getMenuCountByCategory(
+  branchId?: string,
+): Promise<Record<string, number>> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase.from('menus').select('category_id');
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getMenuCountByCategory error:', error);
+    return {};
+  }
+
+  // 카테고리별 카운트
+  const counts: Record<string, number> = {};
+  data?.forEach((menu) => {
+    if (menu.category_id) {
+      counts[menu.category_id] = (counts[menu.category_id] || 0) + 1;
+    }
+  });
+
+  return counts;
+}
+
+// ========== 판매 관리 (Sales Management) ==========
+
+/**
+ * 판매 내역 조회
+ * @param branchId - 지점 ID
+ * @param startDate - 시작일 (YYYY-MM-DD), 선택적
+ * @param endDate - 종료일 (YYYY-MM-DD), 선택적
+ * @returns 판매 내역 배열
+ */
+export async function getSalesHistory(
+  branchId: string,
+  startDate?: string,
+  endDate?: string,
+) {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menu_sales')
+    .select(
+      `
+      id,
+      menu_id,
+      branch_id,
+      sold_at,
+      sales_count,
+      price,
+      total_sales,
+      created_at,
+      updated_at,
+      menus!inner (
+        menu_name
+      )
+    `,
+    )
+    .eq('branch_id', branchId)
+    .order('sold_at', { ascending: false });
+
+  // 날짜 필터 적용
+  if (startDate) {
+    query = query.gte('sold_at', startDate);
+  }
+  if (endDate) {
+    query = query.lte('sold_at', endDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching sales history:', error);
+    return [];
+  }
+
+  // menu_name 매핑
+  return (
+    data?.map((sale) => {
+      // menus는 join된 단일 객체 (배열이 아님)
+      const menu = sale.menus as unknown as { menu_name: string } | null;
+      return {
+        ...sale,
+        menu_name: menu?.menu_name || '',
+      };
+    }) || []
+  );
+}
+
+/**
+ * 메뉴 목록 조회 (템플릿 다운로드용)
+ * @param branchId - 지점 ID
+ * @returns 메뉴 목록
+ */
+export async function getMenusForTemplate(branchId: string) {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('menus')
+    .select('id, name, price')
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching menus for template:', error);
+    return [];
+  }
+
+  return data || [];
 }

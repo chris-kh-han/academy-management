@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/utils/supabase/server';
+import { createServiceRoleClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
 type IngredientInput = {
@@ -16,7 +16,7 @@ export async function updateRecipeIngredients(
   menuId: string,
   ingredients: IngredientInput[],
 ) {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   // 기존 재료 삭제
   const { error: deleteError } = await supabase
@@ -53,4 +53,35 @@ export async function updateRecipeIngredients(
 
   revalidatePath('/recipes');
   return { success: true };
+}
+
+export async function updateMenuMetadata(
+  menuId: string,
+  data: { image_url?: string },
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServiceRoleClient();
+
+    const { error } = await supabase
+      .from('menus')
+      .update({
+        image_url: data.image_url || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('menu_id', menuId);
+
+    if (error) {
+      console.error('updateMenuMetadata error:', error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/recipes');
+    return { success: true };
+  } catch (error) {
+    console.error('updateMenuMetadata catch error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

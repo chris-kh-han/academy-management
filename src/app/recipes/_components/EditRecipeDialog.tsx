@@ -10,8 +10,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Trash2, Plus } from 'lucide-react';
-import { updateRecipeIngredients } from '../_actions/updateRecipe';
+import { updateRecipeIngredients, updateMenuMetadata } from '../_actions/updateRecipe';
+import { ImageUpload } from '@/components/ImageUpload';
 
 type Ingredient = {
   ingredient_id: string;
@@ -34,6 +36,7 @@ type EditRecipeDialogProps = {
   menuId: string;
   menuName: string;
   ingredients: Ingredient[];
+  imageUrl?: string;
   allIngredients: AllIngredient[];
 };
 
@@ -43,6 +46,7 @@ export function EditRecipeDialog({
   menuId,
   menuName,
   ingredients,
+  imageUrl,
   allIngredients,
 }: EditRecipeDialogProps) {
   const [editedIngredients, setEditedIngredients] = React.useState<
@@ -55,6 +59,7 @@ export function EditRecipeDialog({
       loss_rate: number;
     }[]
   >([]);
+  const [menuImageUrl, setMenuImageUrl] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -74,12 +79,13 @@ export function EditRecipeDialog({
           };
         }),
       );
+      setMenuImageUrl(imageUrl || '');
     }
-  }, [open, ingredients, allIngredients]);
+  }, [open, ingredients, imageUrl, allIngredients]);
 
   const handleQtyChange = (index: number, value: string) => {
     const newIngredients = [...editedIngredients];
-    newIngredients[index].qty = parseFloat(value) || 0;
+    newIngredients[index].qty = value === '' ? 0 : Number(value);
     setEditedIngredients(newIngredients);
   };
 
@@ -129,6 +135,19 @@ export function EditRecipeDialog({
   const handleSave = async () => {
     setIsLoading(true);
     try {
+      // 메뉴 메타데이터 업데이트 (이미지 URL)
+      if (menuImageUrl !== (imageUrl || '')) {
+        const metadataResult = await updateMenuMetadata(menuId, {
+          image_url: menuImageUrl,
+        });
+        if (!metadataResult.success) {
+          alert('이미지 저장 실패: ' + metadataResult.error);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 레시피 재료 업데이트
       const result = await updateRecipeIngredients(
         menuId,
         editedIngredients.map((ing) => ({
@@ -159,9 +178,24 @@ export function EditRecipeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>{menuName} - 재료 수정</DialogTitle>
+          <DialogTitle>{menuName} - 재료 및 이미지 수정</DialogTitle>
         </DialogHeader>
         <div className='space-y-4 py-4'>
+          {/* 메뉴 이미지 업로드 */}
+          <div className='space-y-2'>
+            <Label>메뉴 이미지 (선택사항)</Label>
+            <ImageUpload
+              value={menuImageUrl}
+              onChange={(url) => setMenuImageUrl(url || '')}
+              folder='menus'
+            />
+          </div>
+
+          <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
+            <h4 className='font-medium mb-3'>레시피 재료</h4>
+          </div>
+        </div>
+        <div className='space-y-4'>
           {editedIngredients.map((ing, index) => (
             <div key={index} className='flex items-center gap-2'>
               <select
@@ -177,7 +211,7 @@ export function EditRecipeDialog({
               </select>
               <Input
                 type='number'
-                value={ing.qty}
+                value={ing.qty || ''}
                 onChange={(e) => handleQtyChange(index, e.target.value)}
                 className='w-24'
                 placeholder='수량'

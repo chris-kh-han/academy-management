@@ -10,6 +10,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Navbar from '@/components/Navbar';
+import { BranchProvider } from '@/contexts/BranchContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,45 +26,27 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang='en'>
-        <body className={inter.className}>
-          {/* <div className='h-screen flex'>
-
-            <div className='w-[14%] md:w-[8%] lg:w-[16%] xl:w-[14%] p-4'>
-              <Link
-                href='/'
-                className='flex items-center justify-center lg:justify-start gap-2'
-              >
-                <Image src='/next.svg' alt='logo' width={128} height={128} />
-
-              </Link>
-              <Menu />
-            </div>
-
-            <div className='w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-auto flex flex-col'>
-              <Navbar />
-              {children}
-            </div>
-          </div> */}
-          {/* <Navbar /> */}
-          <div className='flex flex-col h-screen bg-[#F7F8FA]'>
-            {/* 상단 헤더 영역 */}
-            <Header />
-            {/* 사이드바 + 메인 콘텐츠 */}
-            <SidebarProvider>
-              <AppSidebar />
-              <main className='w-full overflow-auto'>
-                <div className='w-full overflow-auto flex'>
-                  {/* SidebarTrigger - md 이상에서만 표시 */}
-                  <div className='hidden md:block pt-6 pl-2'>
-                    <SidebarTrigger />
+      <html lang='en' suppressHydrationWarning>
+        <body className={inter.className} suppressHydrationWarning>
+          <BranchProvider>
+            <div className='flex flex-col h-screen bg-[#F7F8FA]'>
+              {/* 상단 헤더 영역 */}
+              <Header />
+              {/* 사이드바 + 메인 콘텐츠 */}
+              <SidebarProvider>
+                <AppSidebar />
+                <main className='w-full overflow-auto'>
+                  <div className='w-full overflow-auto flex'>
+                    {/* SidebarTrigger - md 이상에서만 표시 */}
+                    <div className='hidden md:block pt-6 pl-2'>
+                      <SidebarTrigger />
+                    </div>
+                    <div className='flex-1'>{children}</div>
                   </div>
-                  <div className='flex-1'>{children}</div>
-                </div>
-              </main>
-            </SidebarProvider>
-          </div>
-
+                </main>
+              </SidebarProvider>
+            </div>
+          </BranchProvider>
           <ToastContainer position='bottom-right' theme='dark' />
         </body>
       </html>

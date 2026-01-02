@@ -10,12 +10,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { useBranch } from '@/contexts/BranchContext';
 
 type MenuItem = {
   label: string;
   path: string;
   icon?: React.ReactNode;
-  roles?: string[];
+  adminOnly?: boolean; // owner/admin만 볼 수 있는 메뉴
 };
 
 const menuItems: MenuItem[] = [
@@ -23,20 +24,32 @@ const menuItems: MenuItem[] = [
   { label: '재고 관리', path: '/inventory' },
   { label: '입고/출고 관리', path: '/movements' },
   { label: '메뉴/레서피', path: '/recipes' },
+  { label: '판매 관리', path: '/sales' },
   { label: '리포트', path: '/reports' },
   // { label: '근태 관리', path: '/attendance' },
   // { label: '급여 관리', path: '/payroll' },
   { label: '설정', path: '/settings' },
+  { label: '초기 설정', path: '/setup', adminOnly: true },
 ];
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { userRole } = useBranch();
+
+  // owner 또는 admin인지 확인
+  const isOwnerOrAdmin = userRole === 'owner' || userRole === 'admin';
+
+  // 역할에 따라 메뉴 필터링
+  const visibleMenus = menuItems.filter((menu) => {
+    if (menu.adminOnly && !isOwnerOrAdmin) return false;
+    return true;
+  });
 
   return (
     <Sidebar>
       <SidebarHeader>
-        {menuItems.map((menu) => {
+        {visibleMenus.map((menu) => {
           const isActive =
             pathname === menu.path || pathname?.startsWith(menu.path + '/');
           return (
