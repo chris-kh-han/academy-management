@@ -8,6 +8,8 @@ import {
 } from '@/utils/supabase/supabase';
 import { MenuBoard } from './_components/MenuBoard';
 
+export const dynamic = 'force-dynamic';
+
 const Recipes = async () => {
   const [
     recipes,

@@ -9,7 +9,7 @@ import {
 } from '@/utils/supabase/supabase';
 import ReportsContent from './_components/ReportsContent';
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 export default async function ReportsPage() {
   // 기본 날짜 범위: 최근 30일
