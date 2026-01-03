@@ -11,6 +11,7 @@ import AppSidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Navbar from '@/components/Navbar';
 import { BranchProvider } from '@/contexts/BranchContext';
+import { LocatorInit } from '@/components/LocatorInit';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -48,6 +49,7 @@ export default function RootLayout({
             </div>
           </BranchProvider>
           <ToastContainer position='bottom-right' theme='dark' />
+          <LocatorInit />
         </body>
       </html>
     </ClerkProvider>
