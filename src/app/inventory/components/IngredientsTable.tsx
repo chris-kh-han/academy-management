@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import type { MovementType } from '@/types';
 
 export type Ingredient = {
   id: string;
@@ -75,156 +76,171 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-export const columns: ColumnDef<Ingredient>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label='Select all'
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label='Select row'
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'ingredient_name',
-    header: ({ column }) => (
-      <Button
-        variant='ghost'
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        재료명
-        <ArrowUpDown className='ml-2 h-4 w-4' />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className='font-medium'>{row.getValue('ingredient_name')}</div>
-    ),
-  },
-  {
-    accessorKey: 'category',
-    header: '카테고리',
-    cell: ({ row }) => (
-      <div className='capitalize'>{row.getValue('category') || '-'}</div>
-    ),
-  },
-  {
-    accessorKey: 'current_qty',
-    header: ({ column }) => (
-      <Button
-        variant='ghost'
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        현재 재고
-        <ArrowUpDown className='ml-2 h-4 w-4' />
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const qty = row.getValue('current_qty') as number;
-      const unit = row.original.unit || '';
-      return (
-        <div className='text-right'>
-          {qty} {unit}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: 'reorder_point',
-    header: '재주문점',
-    cell: ({ row }) => {
-      const reorderPoint = row.getValue('reorder_point') as number | null;
-      const unit = row.original.unit || '';
-      return (
-        <div className='text-right'>
-          {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
-        </div>
-      );
-    },
-  },
-  {
-    id: 'status',
-    header: '상태',
-    cell: ({ row }) => {
-      const status = getStockStatus(
-        row.original.current_qty,
-        row.original.reorder_point,
-        row.original.safety_stock,
-      );
-      return (
-        <span
-          className={`px-2 py-1 rounded text-xs font-medium ${status.className}`}
-        >
-          {status.label}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: 'price',
-    header: () => <div className='text-right'>단가</div>,
-    cell: ({ row }) => {
-      const price = row.getValue('price') as number;
-      return (
-        <div className='text-right font-medium'>
-          {price ? formatCurrency(price) : '-'}
-        </div>
-      );
-    },
-  },
-  {
-    id: 'actions',
-    enableHiding: false,
-    cell: ({ row }) => {
-      const ingredient = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='ghost' className='h-8 w-8 p-0'>
-              <span className='sr-only'>메뉴 열기</span>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuLabel>작업</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() =>
-                navigator.clipboard.writeText(ingredient.ingredient_id)
-              }
-            >
-              ID 복사
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>수정</DropdownMenuItem>
-            <DropdownMenuItem>입고 등록</DropdownMenuItem>
-            <DropdownMenuItem>출고 등록</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className='text-red-600'>삭제</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
-
 type IngredientsTableProps = {
   data: Ingredient[];
+  onMovement?: (type: MovementType, ingredientId: number) => void;
 };
 
-export function IngredientsTable({ data }: IngredientsTableProps) {
+export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
+  const columns: ColumnDef<Ingredient>[] = React.useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label='Select all'
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label='Select row'
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: 'ingredient_name',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            재료명
+            <ArrowUpDown className='ml-2 h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div className='font-medium'>{row.getValue('ingredient_name')}</div>
+        ),
+      },
+      {
+        accessorKey: 'category',
+        header: '카테고리',
+        cell: ({ row }) => (
+          <div className='capitalize'>{row.getValue('category') || '-'}</div>
+        ),
+      },
+      {
+        accessorKey: 'current_qty',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            현재 재고
+            <ArrowUpDown className='ml-2 h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const qty = row.getValue('current_qty') as number;
+          const unit = row.original.unit || '';
+          return (
+            <div className='text-right'>
+              {qty} {unit}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'reorder_point',
+        header: '재주문점',
+        cell: ({ row }) => {
+          const reorderPoint = row.getValue('reorder_point') as number | null;
+          const unit = row.original.unit || '';
+          return (
+            <div className='text-right'>
+              {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'status',
+        header: '상태',
+        cell: ({ row }) => {
+          const status = getStockStatus(
+            row.original.current_qty,
+            row.original.reorder_point,
+            row.original.safety_stock,
+          );
+          return (
+            <span
+              className={`px-2 py-1 rounded text-xs font-medium ${status.className}`}
+            >
+              {status.label}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'price',
+        header: () => <div className='text-right'>단가</div>,
+        cell: ({ row }) => {
+          const price = row.getValue('price') as number;
+          return (
+            <div className='text-right font-medium'>
+              {price ? formatCurrency(price) : '-'}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        enableHiding: false,
+        cell: ({ row }) => {
+          const ingredient = row.original;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' className='h-8 w-8 p-0'>
+                  <span className='sr-only'>메뉴 열기</span>
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuLabel>작업</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() =>
+                    navigator.clipboard.writeText(ingredient.ingredient_id)
+                  }
+                >
+                  ID 복사
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onMovement?.('in', Number(ingredient.id))}
+                >
+                  입고 등록
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onMovement?.('out', Number(ingredient.id))}
+                >
+                  출고 등록
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onMovement?.('waste', Number(ingredient.id))}
+                >
+                  폐기 등록
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+      },
+    ],
+    [onMovement],
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],

@@ -35,16 +35,28 @@ type IngredientOption = {
 type MovementFormDialogProps = {
   ingredients: IngredientOption[];
   defaultType?: MovementType;
+  defaultIngredientId?: number;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function MovementFormDialog({
   ingredients,
   defaultType,
+  defaultIngredientId,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: MovementFormDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? onOpenChange! : setInternalOpen;
 
   const [formData, setFormData] = React.useState<{
     ingredient_id: number | null;
@@ -56,7 +68,7 @@ export function MovementFormDialog({
     reference_no: string;
     note: string;
   }>({
-    ingredient_id: null,
+    ingredient_id: defaultIngredientId ?? null,
     movement_type: defaultType || 'in',
     quantity: '',
     unit_price: '',
@@ -65,6 +77,16 @@ export function MovementFormDialog({
     reference_no: '',
     note: '',
   });
+
+  React.useEffect(() => {
+    if (open) {
+      setFormData((prev) => ({
+        ...prev,
+        ingredient_id: defaultIngredientId ?? null,
+        movement_type: defaultType || 'in',
+      }));
+    }
+  }, [open, defaultIngredientId, defaultType]);
 
   const selectedIngredient = ingredients.find(
     (i) => i.id === formData.ingredient_id,
@@ -128,12 +150,16 @@ export function MovementFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className='mr-2 h-4 w-4' />
-          재고 이동 등록
-        </Button>
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className='mr-2 h-4 w-4' />
+            재고 이동 등록
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className='sm:max-w-[500px]'>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
