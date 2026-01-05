@@ -5,7 +5,7 @@ import type { Sale, UserContext, Branch } from '@/types';
 
 // 테스트용 고정 날짜 (나중에 실제 날짜로 변경 시 이 값만 수정하면 됨)
 const USE_FIXED_DATE = true; // false로 바꾸면 실제 오늘 날짜 사용
-const FIXED_TODAY = '2025-11-01';
+const FIXED_TODAY = '2025-01-02';
 
 // 타임존 설정 - 환경변수로 관리 (기본값: 한국)
 // 한국: 'Asia/Seoul', 미국 동부: 'America/New_York', 미국 서부: 'America/Los_Angeles'
@@ -613,15 +613,15 @@ export async function getInventoryReport() {
   return data || [];
 }
 
-// 재고 부족 재료 (임계치 이하)
+// 재고 부족 재료 (임계치 이하 또는 NULL)
 export async function getLowStockIngredients(threshold: number = 10) {
   const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
     .from('ingredients')
     .select('*')
-    .lt('current_stock', threshold)
-    .order('current_stock', { ascending: true });
+    .or(`current_qty.lt.${threshold},current_qty.is.null`)
+    .order('current_qty', { ascending: true, nullsFirst: true });
 
   if (error) {
     console.error('getLowStockIngredients error:', error);

@@ -1,14 +1,17 @@
-import DashboardContent from './components/DashboardContent';
-import {
-  getSalesByPeriods,
-  getDashboardSalesSummary,
-  getDailySalesTrend,
-  getSalesByCategory,
-  getTopSellingMenus,
-  getLowStockIngredients,
-  getRecentStockMovements,
-} from '@/utils/supabase/supabase';
+import { Suspense } from 'react';
 import { currentUser } from '@clerk/nextjs/server';
+import SalesKPICards from './components/SalesKPICards';
+import SalesTrendChart from './components/SalesTrendChart';
+import TopMenusChart from './components/TopMenusChart';
+import CategoryPieChart from './components/CategoryPieChart';
+import LowStockList from './components/LowStockList';
+import RecentMovements from './components/RecentMovements';
+import {
+  KPISkeleton,
+  ChartSkeleton,
+  ListSkeleton,
+  TableSkeleton,
+} from './components/Skeletons';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,45 +22,36 @@ export default async function DashboardPage() {
     // return redirect('/sign-in');
   }
 
-  // 모든 대시보드 데이터를 병렬로 가져오기
-  const [
-    { daySales, weekSales, monthSales },
-    salesSummary,
-    dailyTrend7,
-    dailyTrend30,
-    categoryBreakdown7,
-    categoryBreakdown30,
-    topMenus7,
-    topMenus30,
-    lowStockItems,
-    recentMovements,
-  ] = await Promise.all([
-    getSalesByPeriods(),
-    getDashboardSalesSummary(),
-    getDailySalesTrend(7),
-    getDailySalesTrend(30),
-    getSalesByCategory(7),
-    getSalesByCategory(30),
-    getTopSellingMenus(5, 7),
-    getTopSellingMenus(5, 30),
-    getLowStockIngredients(10),
-    getRecentStockMovements(5),
-  ]);
-
   return (
-    <DashboardContent
-      daySales={daySales ?? []}
-      weekSales={weekSales ?? []}
-      monthSales={monthSales ?? []}
-      salesSummary={salesSummary}
-      dailyTrend7={dailyTrend7}
-      dailyTrend30={dailyTrend30}
-      categoryBreakdown7={categoryBreakdown7}
-      categoryBreakdown30={categoryBreakdown30}
-      topMenus7={topMenus7}
-      topMenus30={topMenus30}
-      lowStockItems={lowStockItems ?? []}
-      recentMovements={recentMovements}
-    />
+    <div className='p-4 md:p-6 space-y-6'>
+      {/* 1. 핵심 지표 카드 - Priority 1 */}
+      <Suspense fallback={<KPISkeleton />}>
+        <SalesKPICards />
+      </Suspense>
+
+      {/* 2. 차트 섹션 */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        <Suspense fallback={<ChartSkeleton />}>
+          <SalesTrendChart />
+        </Suspense>
+
+        <Suspense fallback={<ChartSkeleton />}>
+          <TopMenusChart />
+        </Suspense>
+
+        <Suspense fallback={<ChartSkeleton />}>
+          <CategoryPieChart />
+        </Suspense>
+
+        <Suspense fallback={<ListSkeleton />}>
+          <LowStockList />
+        </Suspense>
+      </div>
+
+      {/* 3. 최근 입출고 내역 - Below fold */}
+      <Suspense fallback={<TableSkeleton />}>
+        <RecentMovements />
+      </Suspense>
+    </div>
   );
 }
