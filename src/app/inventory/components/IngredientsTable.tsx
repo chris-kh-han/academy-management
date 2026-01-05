@@ -133,19 +133,21 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
       {
         accessorKey: 'current_qty',
         header: ({ column }) => (
-          <Button
-            variant='ghost'
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          >
-            현재 재고
-            <ArrowUpDown className='ml-2 h-4 w-4' />
-          </Button>
+          <div className='text-center'>
+            <Button
+              variant='ghost'
+              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            >
+              현재 재고
+              <ArrowUpDown className='ml-2 h-4 w-4' />
+            </Button>
+          </div>
         ),
         cell: ({ row }) => {
           const qty = row.getValue('current_qty') as number;
           const unit = row.original.unit || '';
           return (
-            <div className='text-right'>
+            <div className='text-center'>
               {qty} {unit}
             </div>
           );
@@ -158,7 +160,7 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
           const reorderPoint = row.getValue('reorder_point') as number | null;
           const unit = row.original.unit || '';
           return (
-            <div className='text-right'>
+            <div className='text-center'>
               {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
             </div>
           );
@@ -184,11 +186,11 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
       },
       {
         accessorKey: 'price',
-        header: () => <div className='text-right'>단가</div>,
+        header: '단가',
         cell: ({ row }) => {
           const price = row.getValue('price') as number;
           return (
-            <div className='text-right font-medium'>
+            <div className='text-center font-medium'>
               {price ? formatCurrency(price) : '-'}
             </div>
           );
