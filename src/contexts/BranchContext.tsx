@@ -8,12 +8,13 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { useRouter, usePathname } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import type { Brand, Branch, BrandRole, BranchRole } from '@/types';
+import type { User } from '@supabase/supabase-js';
 
 // 온보딩 리다이렉트에서 제외할 경로
-const EXCLUDED_PATHS = ['/onboarding', '/sign-in', '/sign-up', '/setup'];
+const EXCLUDED_PATHS = ['/onboarding', '/sign-in', '/sign-up', '/setup', '/'];
 
 type BranchContextType = {
   // 현재 상태
@@ -21,6 +22,7 @@ type BranchContextType = {
   currentBranch: Branch | null;
   userRole: BrandRole | BranchRole | null;
   availableBranches: Branch[];
+  user: User | null;
 
   // 로딩 상태
   isLoading: boolean;
@@ -34,16 +36,40 @@ type BranchContextType = {
 const BranchContext = createContext<BranchContextType | null>(null);
 
 export function BranchProvider({ children }: { children: ReactNode }) {
-  const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const supabase = createClient();
 
+  const [user, setUser] = useState<User | null>(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [userRole, setUserRole] = useState<BrandRole | BranchRole | null>(null);
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Supabase auth 상태 감지
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      setIsUserLoaded(true);
+    };
+
+    getUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsUserLoaded(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   // 컨텍스트 로드
   const loadContext = useCallback(async () => {
@@ -92,7 +118,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     },
-    [user?.id, loadContext],
+    [user?.id, loadContext]
   );
 
   // 컨텍스트 새로고침
@@ -125,7 +151,15 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     if (!currentBrand && !currentBranch) {
       router.push('/onboarding');
     }
-  }, [isInitialized, isLoading, user, currentBrand, currentBranch, pathname, router]);
+  }, [
+    isInitialized,
+    isLoading,
+    user,
+    currentBrand,
+    currentBranch,
+    pathname,
+    router,
+  ]);
 
   return (
     <BranchContext.Provider
@@ -134,6 +168,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         currentBranch,
         userRole,
         availableBranches,
+        user,
         isLoading,
         isInitialized,
         switchBranch,

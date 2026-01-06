@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/utils/supabase/server';
 import { setDefaultBranch } from '@/utils/supabase/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -15,16 +18,16 @@ export async function POST(request: NextRequest) {
     if (!branchId) {
       return NextResponse.json(
         { error: 'Branch ID is required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    const success = await setDefaultBranch(userId, branchId);
+    const success = await setDefaultBranch(user.id, branchId);
 
     if (!success) {
       return NextResponse.json(
         { error: 'Failed to switch branch' },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
     console.error('POST /api/user/switch-branch error:', error);
     return NextResponse.json(
       { error: 'Failed to switch branch' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

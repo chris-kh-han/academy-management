@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import { toast } from 'react-toastify';
 import {
   Building2,
@@ -31,8 +30,7 @@ type Step = 'role' | 'brand' | 'branch' | 'invite' | 'complete';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const { currentBrand, currentBranch, isInitialized, refreshContext } =
+  const { currentBrand, currentBranch, isInitialized, refreshContext, user } =
     useBranch();
 
   const [step, setStep] = useState<Step>('role');
@@ -187,7 +185,7 @@ export default function OnboardingPage() {
   };
 
   // 로딩 중이거나 초기화 전이면 로딩 표시
-  if (!isLoaded || !isInitialized) {
+  if (!isInitialized) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
         <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
@@ -237,7 +235,7 @@ export default function OnboardingPage() {
           <CardHeader className='text-center'>
             <CardTitle className='text-2xl'>환영합니다!</CardTitle>
             <CardDescription>
-              {user?.firstName || user?.fullName}님, 어떤 역할로 시작하시나요?
+              {user?.email?.split('@')[0]}님, 어떤 역할로 시작하시나요?
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { createServiceRoleClient } from '@/utils/supabase/server';
+import { createClient, createServiceRoleClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -16,9 +15,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
     }
 
@@ -32,17 +34,17 @@ export async function POST(request: Request) {
     }
 
     // Service role client 사용 (RLS 우회)
-    const supabase = createServiceRoleClient();
+    const serviceClient = createServiceRoleClient();
 
     // 브랜드 생성
-    console.log('Creating brand:', { name, slug, owner_user_id: userId });
+    console.log('Creating brand:', { name, slug, owner_user_id: user.id });
 
-    const { data: brand, error: brandError } = await supabase
+    const { data: brand, error: brandError } = await serviceClient
       .from('brands')
       .insert({
         name,
         slug,
-        owner_user_id: userId,
+        owner_user_id: user.id,
       })
       .select()
       .single();
@@ -64,9 +66,9 @@ export async function POST(request: Request) {
     }
 
     // Owner를 brand_members에도 추가 (is_default = true)
-    const { error: memberError } = await supabase.from('brand_members').insert({
+    const { error: memberError } = await serviceClient.from('brand_members').insert({
       brand_id: brand.id,
-      user_id: userId,
+      user_id: user.id,
       role: 'owner',
       is_default: true,
     });

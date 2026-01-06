@@ -4,19 +4,20 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
-import { UserButton } from '@clerk/nextjs';
+import { Menu, LogOut } from 'lucide-react';
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import BranchSwitcher from '@/components/BranchSwitcher';
 import { useBranch } from '@/contexts/BranchContext';
+import { signOut } from '@/app/auth/actions';
 
 type MenuItem = {
   label: string;
@@ -36,7 +37,7 @@ const menuItems: MenuItem[] = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { userRole } = useBranch();
+  const { userRole, user } = useBranch();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -64,9 +65,39 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 모바일: UserButton + 드롭다운 메뉴 */}
+      {/* 모바일: 사용자 메뉴 + 드롭다운 메뉴 */}
       <div className='flex items-center gap-2'>
-        <UserButton />
+        {/* 사용자 드롭다운 */}
+        {mounted && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='ghost' size='sm' className='gap-2'>
+                <span className='hidden sm:inline text-sm'>
+                  {user?.email?.split('@')[0]}
+                </span>
+                <div className='w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium'>
+                  {user?.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                {user?.email}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <form action={signOut}>
+                  <button type='submit' className='flex items-center gap-2 w-full'>
+                    <LogOut className='h-4 w-4' />
+                    로그아웃
+                  </button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {/* 모바일 메뉴 */}
         <div className='block md:hidden'>
           {mounted && (
             <DropdownMenu>
@@ -79,14 +110,15 @@ export default function Header() {
               <DropdownMenuContent align='end' className='w-48'>
                 {visibleMenus.map((menu) => {
                   const isActive =
-                    pathname === menu.path || pathname?.startsWith(menu.path + '/');
+                    pathname === menu.path ||
+                    pathname?.startsWith(menu.path + '/');
                   return (
                     <DropdownMenuItem key={menu.path} asChild>
                       <Link
                         href={menu.path}
                         className={cn(
                           'w-full cursor-pointer',
-                          isActive && 'bg-accent',
+                          isActive && 'bg-accent'
                         )}
                       >
                         {menu.label}

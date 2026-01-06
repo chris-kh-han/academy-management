@@ -1,6 +1,6 @@
-import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { SignInButton, SignUpButton } from '@clerk/nextjs';
+import { createClient } from '@/utils/supabase/server';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 const features = [
   {
@@ -26,9 +26,12 @@ const features = [
 ];
 
 export default async function Home() {
-  const { userId } = await auth();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (userId) {
+  if (user) {
     redirect('/dashboard');
   }
 
@@ -45,16 +48,16 @@ export default async function Home() {
           효율적인 매장 운영을 위한 올인원 솔루션
         </p>
         <div className='flex gap-4 justify-center'>
-          <SignInButton mode='modal'>
+          <AuthModal mode='sign-in'>
             <button className='px-6 py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition'>
               로그인
             </button>
-          </SignInButton>
-          <SignUpButton mode='modal'>
+          </AuthModal>
+          <AuthModal mode='sign-up'>
             <button className='px-6 py-3 bg-white text-slate-900 rounded-lg font-medium border border-slate-300 hover:bg-slate-50 transition'>
               회원가입
             </button>
-          </SignUpButton>
+          </AuthModal>
         </div>
       </header>
 

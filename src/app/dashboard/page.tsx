@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
-import { currentUser } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/utils/supabase/server';
 import SalesKPICards from './components/SalesKPICards';
 import SalesTrendChart from './components/SalesTrendChart';
 import TopMenusChart from './components/TopMenusChart';
@@ -16,10 +17,13 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const user = await currentUser();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    // return redirect('/sign-in');
+    redirect('/');
   }
 
   return (

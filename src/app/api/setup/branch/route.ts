@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { createServiceRoleClient } from '@/utils/supabase/server';
+import { createClient, createServiceRoleClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
     }
 
@@ -20,13 +22,13 @@ export async function POST(request: Request) {
     }
 
     // Service role client 사용 (RLS 우회)
-    const supabase = createServiceRoleClient();
+    const serviceClient = createServiceRoleClient();
 
     // 사용자가 소유한 브랜드 찾기
-    const { data: brands, error: brandError } = await supabase
+    const { data: brands, error: brandError } = await serviceClient
       .from('brands')
       .select('id, name')
-      .eq('owner_user_id', userId)
+      .eq('owner_user_id', user.id)
       .limit(1);
 
     if (brandError) throw brandError;
@@ -41,13 +43,13 @@ export async function POST(request: Request) {
     const brand = brands[0];
 
     // 지점 생성
-    const { data: branch, error: branchError } = await supabase
+    const { data: branch, error: branchError } = await serviceClient
       .from('branches')
       .insert({
         brand_id: brand.id,
         name,
         slug,
-        manager_user_id: userId, // 생성자가 기본 매니저
+        manager_user_id: user.id, // 생성자가 기본 매니저
       })
       .select()
       .single();
@@ -63,9 +65,9 @@ export async function POST(request: Request) {
     }
 
     // 생성자를 branch_members에도 추가 (manager, is_default = true)
-    const { error: memberError } = await supabase.from('branch_members').insert({
+    const { error: memberError } = await serviceClient.from('branch_members').insert({
       branch_id: branch.id,
-      user_id: userId,
+      user_id: user.id,
       role: 'manager',
       is_default: true,
     });

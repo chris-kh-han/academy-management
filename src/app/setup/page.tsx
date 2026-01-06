@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,9 +13,10 @@ import {
 } from '@/components/ui/card';
 import { toast } from 'react-toastify';
 import { Copy, Check, Building2, Store, Loader2 } from 'lucide-react';
+import { useBranch } from '@/contexts/BranchContext';
 
 export default function SetupPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isInitialized } = useBranch();
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -119,7 +119,7 @@ export default function SetupPage() {
     }
   }, [branchName]);
 
-  if (!isLoaded) {
+  if (!isInitialized) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
         <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
@@ -148,16 +148,18 @@ export default function SetupPage() {
           <div className='grid gap-4 md:grid-cols-2'>
             <div>
               <Label className='text-muted-foreground text-sm'>이름</Label>
-              <p className='font-medium'>{user?.fullName || user?.firstName || '-'}</p>
+              <p className='font-medium'>
+                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || '-'}
+              </p>
             </div>
             <div>
               <Label className='text-muted-foreground text-sm'>이메일</Label>
-              <p className='font-medium'>{user?.primaryEmailAddress?.emailAddress || '-'}</p>
+              <p className='font-medium'>{user?.email || '-'}</p>
             </div>
           </div>
 
           <div>
-            <Label className='text-muted-foreground text-sm'>Clerk User ID</Label>
+            <Label className='text-muted-foreground text-sm'>Supabase User ID</Label>
             <div className='flex items-center gap-2 mt-1'>
               <code className='flex-1 bg-muted px-3 py-2 rounded-md text-sm font-mono'>
                 {user?.id || '-'}
@@ -288,7 +290,7 @@ export default function SetupPage() {
           <pre className='bg-muted p-4 rounded-md text-sm overflow-x-auto'>
 {`-- 1. 브랜드 생성 (현재 사용자가 owner)
 INSERT INTO brands (name, slug, owner_user_id)
-VALUES ('피자하우스', 'pizza-house', '${user?.id || 'YOUR_CLERK_USER_ID'}');
+VALUES ('피자하우스', 'pizza-house', '${user?.id || 'YOUR_SUPABASE_USER_ID'}');
 
 -- 2. 지점 생성 (brand_id는 위에서 생성된 ID로 대체)
 INSERT INTO branches (brand_id, name, slug)
@@ -296,7 +298,7 @@ VALUES ('BRAND_UUID', '강남점', 'gangnam');
 
 -- 3. 다른 직원 추가 (branch_id, user_id 대체 필요)
 INSERT INTO branch_members (branch_id, user_id, user_email, role, is_default)
-VALUES ('BRANCH_UUID', 'CLERK_USER_ID', 'staff@example.com', 'staff', true);`}
+VALUES ('BRANCH_UUID', 'SUPABASE_USER_ID', 'staff@example.com', 'staff', true);`}
           </pre>
         </CardContent>
       </Card>
