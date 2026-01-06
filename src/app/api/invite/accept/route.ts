@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { createServiceRoleClient } from '@/utils/supabase/server';
+import { createClient, createServiceRoleClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
     }
 
@@ -19,10 +21,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const serviceClient = createServiceRoleClient();
 
     // 초대 코드 조회
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await serviceClient
       .from('branch_invites')
       .select('*, branches(id, name, brand_id, brands(id, name))')
       .eq('code', code.toUpperCase())
@@ -38,11 +40,11 @@ export async function POST(request: Request) {
     }
 
     // 이미 해당 지점의 멤버인지 확인
-    const { data: existingMember } = await supabase
+    const { data: existingMember } = await serviceClient
       .from('branch_members')
       .select('id')
       .eq('branch_id', invite.branch_id)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
     if (existingMember) {
@@ -52,17 +54,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 현재 사용자 정보 가져오기
-    const user = await currentUser();
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    const userName = user?.fullName || user?.firstName || '';
-
     // branch_members에 추가
-    const { error: memberError } = await supabase.from('branch_members').insert({
+    const { error: memberError } = await serviceClient.from('branch_members').insert({
       branch_id: invite.branch_id,
-      user_id: userId,
-      user_email: userEmail,
-      user_name: userName,
+      user_id: user.id,
+      user_email: user.email,
+      user_name: user.user_metadata?.full_name || '',
       role: invite.role,
       is_default: true,
     });
@@ -76,11 +73,11 @@ export async function POST(request: Request) {
     }
 
     // 초대 사용 처리
-    await supabase
+    await serviceClient
       .from('branch_invites')
       .update({
         used_at: new Date().toISOString(),
-        used_by: userId,
+        used_by: user.id,
       })
       .eq('id', invite.id);
 

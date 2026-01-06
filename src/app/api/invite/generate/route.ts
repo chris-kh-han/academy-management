@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { createServiceRoleClient } from '@/utils/supabase/server';
+import { createClient, createServiceRoleClient } from '@/utils/supabase/server';
 
 // 6자리 랜덤 코드 생성
 function generateCode(): string {
@@ -14,9 +13,12 @@ function generateCode(): string {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
     }
 
@@ -29,10 +31,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const serviceClient = createServiceRoleClient();
 
     // 사용자가 해당 지점의 관리자인지 확인
-    const { data: branch } = await supabase
+    const { data: branch } = await serviceClient
       .from('branches')
       .select(`
         id, name, brand_id,
@@ -50,20 +52,20 @@ export async function POST(request: Request) {
 
     // 권한 확인: 브랜드 오너이거나 지점 매니저여야 함
     const brandData = Array.isArray(branch.brands) ? branch.brands[0] : branch.brands;
-    const isOwner = brandData?.owner_user_id === userId;
+    const isOwner = brandData?.owner_user_id === user.id;
 
-    const { data: brandMember } = await supabase
+    const { data: brandMember } = await serviceClient
       .from('brand_members')
       .select('role')
       .eq('brand_id', branch.brand_id)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
-    const { data: branchMember } = await supabase
+    const { data: branchMember } = await serviceClient
       .from('branch_members')
       .select('role')
       .eq('branch_id', branchId)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
     const isBrandAdmin = brandMember?.role === 'owner' || brandMember?.role === 'admin';
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
     let attempts = 0;
     while (!code && attempts < 5) {
       const candidateCode = generateCode();
-      const { data: existing } = await supabase
+      const { data: existing } = await serviceClient
         .from('branch_invites')
         .select('id')
         .eq('code', candidateCode)
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
     // 초대 생성
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await serviceClient
       .from('branch_invites')
       .insert({
         branch_id: branchId,
@@ -113,7 +115,7 @@ export async function POST(request: Request) {
         email: email || null,
         role,
         expires_at: expiresAt.toISOString(),
-        created_by: userId,
+        created_by: user.id,
       })
       .select()
       .single();
@@ -147,9 +149,12 @@ export async function POST(request: Request) {
 // 초대 목록 조회
 export async function GET(request: Request) {
   try {
-    const { userId } = await auth();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
     }
 
@@ -163,10 +168,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const serviceClient = createServiceRoleClient();
 
     // 초대 목록 조회
-    const { data: invites, error } = await supabase
+    const { data: invites, error } = await serviceClient
       .from('branch_invites')
       .select('*')
       .eq('branch_id', branchId)

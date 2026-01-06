@@ -1,12 +1,12 @@
-import { UserButton } from '@clerk/nextjs';
-import { currentUser } from '@clerk/nextjs/server';
-
 import Image from 'next/image';
 import { SearchIcon } from '../../icons';
+import { createClient } from '@/utils/supabase/server';
 
 export default async function Navbar() {
-  const user = await currentUser();
-  console.log(user);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <div className='flex items-center justify-between p-4'>
@@ -21,9 +21,7 @@ export default async function Navbar() {
 
       <div className='flex justify-end items-center w-full gap-6'>
         <Image src='/announcement.png' alt='' width={20} height={20} />
-
-        <div>Alpha Bravo</div>
-        <UserButton />
+        <div>{user?.email?.split('@')[0] || 'User'}</div>
       </div>
     </div>
   );

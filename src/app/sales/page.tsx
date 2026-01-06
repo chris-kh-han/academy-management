@@ -1,20 +1,22 @@
 import { getSalesHistory, getUserContext } from '@/utils/supabase/supabase';
-import { auth } from '@clerk/nextjs/server';
+import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { SalesContent } from './_components/SalesContent';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SalesPage() {
-  // 사용자 인증 확인
-  const { userId } = await auth();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!userId) {
-    redirect('/sign-in');
+  if (!user) {
+    redirect('/');
   }
 
   // 사용자 컨텍스트 가져오기
-  const context = await getUserContext(userId);
+  const context = await getUserContext(user.id);
 
   if (!context?.currentBranch?.id) {
     redirect('/onboarding');
