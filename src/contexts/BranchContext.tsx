@@ -136,7 +136,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     }
   }, [isUserLoaded, user?.id, loadContext]);
 
-  // 온보딩 리다이렉트: 로그인했지만 브랜드/지점이 없는 경우
+  // 온보딩 리다이렉트: 로그인했지만 브랜드가 없는 경우
   useEffect(() => {
     if (!isInitialized || isLoading) return;
     if (!user) return; // 로그인 안 된 상태면 리다이렉트 안 함
@@ -147,19 +147,11 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     );
     if (isExcludedPath) return;
 
-    // 브랜드/지점 둘 다 없으면 온보딩으로
-    if (!currentBrand && !currentBranch) {
+    // 브랜드가 없으면 온보딩으로
+    if (!currentBrand) {
       router.push('/onboarding');
     }
-  }, [
-    isInitialized,
-    isLoading,
-    user,
-    currentBrand,
-    currentBranch,
-    pathname,
-    router,
-  ]);
+  }, [isInitialized, isLoading, user, currentBrand, pathname, router]);
 
   return (
     <BranchContext.Provider

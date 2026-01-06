@@ -1562,36 +1562,35 @@ export async function updatePayrollStatus(
 export async function getUserContext(userId: string): Promise<UserContext> {
   const supabase = createServiceRoleClient();
 
-  // 1. 사용자의 지점 멤버십 조회
+  // 1. 사용자의 브랜드 멤버십 조회 (기본 브랜드 우선)
+  const { data: brandMembers } = await supabase
+    .from('brand_members')
+    .select('*, brands(*)')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false });
+
+  const defaultBrandMember = brandMembers?.find((m) => m.is_default);
+  const currentBrand = defaultBrandMember?.brands || brandMembers?.[0]?.brands;
+
+  // 2. 사용자의 지점 멤버십 조회
   const { data: branchMembers } = await supabase
     .from('branch_members')
     .select('*, branches(*)')
     .eq('user_id', userId);
 
-  // 2. 사용 가능한 지점 목록
+  // 3. 사용 가능한 지점 목록
   const availableBranches: Branch[] =
     branchMembers?.map((m) => m.branches).filter(Boolean) || [];
 
-  // 3. 기본 지점 찾기 (is_default가 true인 것)
-  const defaultMember = branchMembers?.find((m) => m.is_default);
-  const currentBranch = defaultMember?.branches || availableBranches[0];
-
-  // 4. 현재 브랜드 조회
-  let currentBrand = undefined;
-  if (currentBranch?.brand_id) {
-    const { data: brand } = await supabase
-      .from('brands')
-      .select('*')
-      .eq('id', currentBranch.brand_id)
-      .single();
-    currentBrand = brand;
-  }
+  // 4. 기본 지점 찾기 (is_default가 true인 것)
+  const defaultBranchMember = branchMembers?.find((m) => m.is_default);
+  const currentBranch = defaultBranchMember?.branches || availableBranches[0];
 
   return {
     userId,
     currentBrand,
     currentBranch,
-    userRole: defaultMember?.role,
+    userRole: defaultBranchMember?.role || defaultBrandMember?.role,
     availableBranches,
   };
 }

@@ -1,184 +1,132 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import {
-  Building2,
-  Store,
-  Users,
   ArrowRight,
-  ArrowLeft,
   Loader2,
   Check,
+  Package,
+  ChefHat,
+  BarChart3,
 } from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { LiquidGlassCard } from '@/components/ui/liquid-glass';
 import { useBranch } from '@/contexts/BranchContext';
 
-type UserType = 'owner' | 'staff' | null;
-type Step = 'role' | 'brand' | 'branch' | 'invite' | 'complete';
+type Step = 'welcome' | 'brand' | 'confirm' | 'complete';
+
+const walkthroughSlides = [
+  {
+    title: '재고 관리를\n한눈에',
+    description:
+      '실시간 재고 현황 파악부터\n입출고 관리까지 한 번에 해결하세요.',
+    icon: Package,
+    color: 'text-blue-400',
+  },
+  {
+    title: '메뉴와 레시피\n통합 관리',
+    description: '메뉴별 레시피를 등록하고\n원가 계산까지 자동으로 처리됩니다.',
+    icon: ChefHat,
+    color: 'text-amber-400',
+  },
+  {
+    title: '매출 분석\n리포트',
+    description: '일별, 주별, 월별 매출 현황을\n직관적인 차트로 확인하세요.',
+    icon: BarChart3,
+    color: 'text-emerald-400',
+  },
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { currentBrand, currentBranch, isInitialized, refreshContext, user } =
-    useBranch();
+  const { currentBrand, isInitialized, refreshContext, user } = useBranch();
 
-  const [step, setStep] = useState<Step>('role');
-  const [userType, setUserType] = useState<UserType>(null);
+  const [step, setStep] = useState<Step>('welcome');
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [brandName, setBrandName] = useState('');
 
-  // 지점이 있으면 대시보드로 리다이렉트 (브랜드만 있으면 지점 생성 필요)
+  // Embla carousel
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
+
+  // Sync currentSlide with embla
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCurrentSlide(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
   useEffect(() => {
-    if (isInitialized && currentBranch) {
+    if (!emblaApi) return;
+    emblaApi.on('select', onSelect);
+    onSelect();
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi, onSelect]);
+
+  // 브랜드가 있으면 대시보드로 리다이렉트
+  useEffect(() => {
+    if (isInitialized && currentBrand) {
       router.push('/dashboard');
     }
-    // 브랜드만 있고 지점이 없으면 지점 생성 단계로 바로 이동
-    if (isInitialized && currentBrand && !currentBranch) {
-      setUserType('owner');
-      setStep('branch');
-    }
-  }, [isInitialized, currentBrand, currentBranch, router]);
+  }, [isInitialized, currentBrand, router]);
 
-  // Owner 폼 상태
-  const [brandName, setBrandName] = useState('');
-  const [brandSlug, setBrandSlug] = useState('');
-  const [branchName, setBranchName] = useState('');
-  const [branchSlug, setBranchSlug] = useState('');
-
-  // Staff 폼 상태
-  const [inviteCode, setInviteCode] = useState('');
-
-  // slug 자동 생성 (영어, 숫자, 하이픈만)
-  useEffect(() => {
-    if (brandName) {
-      setBrandSlug(
-        brandName
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-]/g, ''),
-      );
-    }
-  }, [brandName]);
-
-  useEffect(() => {
-    if (branchName) {
-      setBranchSlug(
-        branchName
-          .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-]/g, ''),
-      );
-    }
-  }, [branchName]);
-
-  const handleRoleSelect = (type: UserType) => {
-    setUserType(type);
-    if (type === 'owner') {
-      setStep('brand');
+  const handleNextSlide = () => {
+    if (emblaApi && currentSlide < walkthroughSlides.length - 1) {
+      emblaApi.scrollNext();
     } else {
-      setStep('invite');
+      setStep('brand');
     }
   };
 
-  const handleCreateBrand = async () => {
+  const scrollTo = useCallback(
+    (index: number) => {
+      if (emblaApi) emblaApi.scrollTo(index);
+    },
+    [emblaApi],
+  );
+
+  const handleSkip = () => {
+    setStep('brand');
+  };
+
+  const handleNextFromBrand = () => {
     if (!brandName.trim()) {
       toast.error('브랜드 이름을 입력해주세요');
       return;
     }
+    setStep('confirm');
+  };
 
+  const handleConfirmCreate = async () => {
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/setup/brand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: brandName, slug: brandSlug }),
+        body: JSON.stringify({ name: brandName }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success('브랜드가 생성되었습니다');
-      await refreshContext(); // 컨텍스트 새로고침
-      setStep('branch');
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : '브랜드 생성 실패');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCreateBranch = async () => {
-    if (!branchName.trim()) {
-      toast.error('지점 이름을 입력해주세요');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/setup/branch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: branchName, slug: branchSlug }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      toast.success('지점이 생성되었습니다');
-      await refreshContext(); // 컨텍스트 새로고침
+      toast.success('설정이 완료되었습니다');
       setStep('complete');
 
-      // 잠시 후 대시보드로 이동
-      setTimeout(() => {
+      // 서버 컴포넌트 갱신 후 부드럽게 이동
+      setTimeout(async () => {
+        await refreshContext();
+        router.refresh();
         router.push('/dashboard');
       }, 1500);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : '지점 생성 실패');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAcceptInvite = async () => {
-    if (!inviteCode.trim()) {
-      toast.error('초대 코드를 입력해주세요');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/invite/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: inviteCode.toUpperCase() }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      toast.success('초대가 수락되었습니다');
-      await refreshContext(); // 컨텍스트 새로고침
-      setStep('complete');
-
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
-    } catch (error: unknown) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : '초대 코드가 유효하지 않습니다',
-      );
+      toast.error(error instanceof Error ? error.message : '생성 실패');
     } finally {
       setIsSubmitting(false);
     }
@@ -193,8 +141,8 @@ export default function OnboardingPage() {
     );
   }
 
-  // 이미 지점이 있으면 리다이렉트 중이므로 로딩 표시 (플래시 방지)
-  if (currentBranch) {
+  // 이미 브랜드가 있으면 리다이렉트 중이므로 로딩 표시
+  if (currentBrand) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
         <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
@@ -204,192 +152,188 @@ export default function OnboardingPage() {
 
   return (
     <div className='space-y-6'>
-      {/* 진행 표시 */}
-      <div className='flex justify-center'>
-        <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-          <span className={step === 'role' ? 'text-primary font-medium' : ''}>
-            역할 선택
-          </span>
-          <ArrowRight className='h-4 w-4' />
-          <span
-            className={
-              ['brand', 'branch', 'invite'].includes(step)
-                ? 'text-primary font-medium'
-                : ''
-            }
-          >
-            {userType === 'owner' ? '브랜드/지점 설정' : '초대 코드'}
-          </span>
-          <ArrowRight className='h-4 w-4' />
-          <span
-            className={step === 'complete' ? 'text-primary font-medium' : ''}
-          >
-            완료
-          </span>
-        </div>
-      </div>
-
-      {/* Step: 역할 선택 */}
-      {step === 'role' && (
-        <Card>
-          <CardHeader className='text-center'>
-            <CardTitle className='text-2xl'>환영합니다!</CardTitle>
-            <CardDescription>
-              {user?.email?.split('@')[0]}님, 어떤 역할로 시작하시나요?
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
+      {/* Step: Welcome Walkthrough */}
+      {step === 'welcome' && (
+        <LiquidGlassCard
+          blurIntensity='xl'
+          className='w-[400px] h-[620px] p-0 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300'
+        >
+          {/* 건너뛰기 버튼 */}
+          <div className='flex justify-end p-4'>
             <button
-              onClick={() => handleRoleSelect('owner')}
-              className='w-full p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-left group'
+              onClick={handleSkip}
+              className='text-white/60 hover:text-white text-sm cursor-pointer'
             >
-              <div className='flex items-start gap-4'>
-                <div className='p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors'>
-                  <Building2 className='h-6 w-6' />
-                </div>
-                <div>
-                  <h3 className='font-semibold text-lg'>
-                    프랜차이즈 오너 / 본사 관리자
-                  </h3>
-                  <p className='text-muted-foreground text-sm mt-1'>
-                    브랜드를 생성하고 여러 지점을 관리합니다
-                  </p>
-                </div>
-              </div>
+              건너뛰기
             </button>
+          </div>
 
-            <button
-              onClick={() => handleRoleSelect('staff')}
-              className='w-full p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all text-left group'
+          {/* Embla Carousel */}
+          <div className='overflow-hidden' ref={emblaRef}>
+            <div className='flex'>
+              {walkthroughSlides.map((slide, index) => {
+                const IconComponent = slide.icon;
+                return (
+                  <div key={index} className='flex-[0_0_100%] min-w-0 px-8'>
+                    {/* 텍스트 영역 */}
+                    <div className='mb-8'>
+                      <h2 className='text-3xl font-bold text-white whitespace-pre-line leading-tight'>
+                        {slide.title}
+                      </h2>
+                      <p className='text-white/70 mt-4 whitespace-pre-line'>
+                        {slide.description}
+                      </p>
+                    </div>
+
+                    {/* 아이콘 영역 */}
+                    <div className='flex justify-center py-12'>
+                      <div className='relative'>
+                        {/* 배경 원 */}
+                        <div className='w-40 h-40 rounded-full bg-white/10 flex items-center justify-center'>
+                          <IconComponent
+                            className={`w-20 h-20 ${slide.color}`}
+                          />
+                        </div>
+                        {/* 장식 요소들 */}
+                        <div className='absolute -top-2 -right-2 w-4 h-4 bg-white/20 rounded-full' />
+                        <div className='absolute -bottom-4 -left-4 w-6 h-6 bg-white/10 rounded-full' />
+                        <div className='absolute top-1/2 -right-8 w-3 h-3 bg-white/15 rounded-full' />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 하단 컨트롤 영역 */}
+          <div className='px-8 pb-8'>
+            {/* 도트 인디케이터 */}
+            <div className='flex justify-center gap-2 mb-8'>
+              {walkthroughSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => scrollTo(index)}
+                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
+                    index === currentSlide
+                      ? 'bg-white w-6'
+                      : 'bg-white/30 hover:bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* 다음/시작 버튼 */}
+            <Button
+              className='w-full bg-white text-gray-900 hover:bg-white/90 cursor-pointer py-6 text-lg'
+              onClick={handleNextSlide}
             >
-              <div className='flex items-start gap-4'>
-                <div className='p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors'>
-                  <Users className='h-6 w-6' />
-                </div>
-                <div>
-                  <h3 className='font-semibold text-lg'>매장 관리자 / 직원</h3>
-                  <p className='text-muted-foreground text-sm mt-1'>
-                    초대 코드를 받아 기존 지점에 합류합니다
-                  </p>
-                </div>
-              </div>
-            </button>
-          </CardContent>
-        </Card>
+              {currentSlide === walkthroughSlides.length - 1
+                ? '시작하기'
+                : '다음'}
+              <ArrowRight className='h-5 w-5 ml-2' />
+            </Button>
+          </div>
+
+          {/* 하단 바 */}
+          <div className='flex justify-center pb-4'>
+            <div className='w-32 h-1 bg-white/20 rounded-full' />
+          </div>
+        </LiquidGlassCard>
       )}
 
-      {/* Step: 브랜드 생성 */}
+      {/* Step: 브랜드 입력 */}
       {step === 'brand' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <Building2 className='h-5 w-5' />
-              브랜드 정보
-            </CardTitle>
-            <CardDescription>
-              본사/프랜차이즈 브랜드 정보를 입력해주세요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='brandName'>브랜드 이름</Label>
-              <Input
-                id='brandName'
-                placeholder='예: 맛있는 피자'
-                value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='brandSlug'>URL 식별자</Label>
-              <Input
-                id='brandSlug'
-                placeholder='자동 생성됩니다'
-                value={brandSlug}
-                onChange={(e) => setBrandSlug(e.target.value)}
-                disabled={isSubmitting}
-              />
-              <p className='text-xs text-muted-foreground'>
-                URL에 사용되는 고유 식별자입니다
+        <LiquidGlassCard
+          blurIntensity='xl'
+          className='w-[400px] h-[620px] p-0 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300'
+        >
+          {/* 돌아가기 버튼 */}
+          <div className='flex justify-start p-4'>
+            <button
+              onClick={() => setStep('welcome')}
+              className='text-white/60 hover:text-white text-sm cursor-pointer'
+            >
+              돌아가기
+            </button>
+          </div>
+
+          <div className='px-8 pb-8 flex-1 flex flex-col'>
+            <div className='mb-8 text-center'>
+              <h2 className='text-2xl font-bold text-white'>브랜드 설정</h2>
+              <p className='text-white/80 mt-2'>
+                {user?.email?.split('@')[0]}님, 브랜드 이름을 입력해주세요
               </p>
             </div>
-
-            <div className='flex gap-2 pt-4'>
-              <Button
-                variant='outline'
-                onClick={() => setStep('role')}
-                disabled={isSubmitting}
-              >
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                이전
-              </Button>
-              <Button
-                className='flex-1'
-                onClick={handleCreateBrand}
-                disabled={isSubmitting || !brandName.trim()}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    생성 중...
-                  </>
-                ) : (
-                  <>
-                    다음
-                    <ArrowRight className='h-4 w-4 ml-2' />
-                  </>
-                )}
-              </Button>
+            <div className='space-y-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='brandName' className='text-white/80'>
+                  브랜드 이름
+                </Label>
+                <Input
+                  id='brandName'
+                  placeholder='예: 맛있는 피자'
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  disabled={isSubmitting}
+                  className='bg-white/10 border-white/20 text-white placeholder:text-white/40'
+                />
+              </div>
+              <div className='pt-4'>
+                <Button
+                  className='w-full bg-white text-gray-900 hover:bg-white/90 cursor-pointer'
+                  onClick={handleNextFromBrand}
+                  disabled={!brandName.trim()}
+                >
+                  다음
+                  <ArrowRight className='h-4 w-4 ml-2' />
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className='flex justify-center pb-4'>
+            <div className='w-32 h-1 bg-white/20 rounded-full' />
+          </div>
+        </LiquidGlassCard>
       )}
 
-      {/* Step: 지점 생성 */}
-      {step === 'branch' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <Store className='h-5 w-5' />첫 번째 지점
-            </CardTitle>
-            <CardDescription>첫 번째 지점 정보를 입력해주세요</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='branchName'>지점 이름</Label>
-              <Input
-                id='branchName'
-                placeholder='예: 강남점'
-                value={branchName}
-                onChange={(e) => setBranchName(e.target.value)}
-                disabled={isSubmitting}
-              />
+      {/* Step: 확인 */}
+      {step === 'confirm' && (
+        <LiquidGlassCard
+          blurIntensity='xl'
+          className='w-[400px] h-[620px] p-8 flex flex-col animate-in fade-in slide-in-from-right-4 duration-300'
+        >
+          <div className='mb-6'>
+            <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+              <Check className='h-5 w-5' />
+              최종 확인
+            </h2>
+            <p className='text-white/80 mt-1'>입력하신 정보를 확인해주세요</p>
+          </div>
+          <div className='space-y-4'>
+            <div className='p-4 rounded-lg bg-white/10 space-y-3'>
+              <div className='flex justify-between'>
+                <span className='text-white/70'>브랜드</span>
+                <span className='text-white font-medium'>{brandName}</span>
+              </div>
+              <div className='flex justify-between'>
+                <span className='text-white/70'>지점</span>
+                <span className='text-white font-medium'>본점 (자동 생성)</span>
+              </div>
             </div>
-            <div className='space-y-2'>
-              <Label htmlFor='branchSlug'>URL 식별자</Label>
-              <Input
-                id='branchSlug'
-                placeholder='자동 생성됩니다'
-                value={branchSlug}
-                onChange={(e) => setBranchSlug(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
             <div className='flex gap-2 pt-4'>
               <Button
                 variant='outline'
                 onClick={() => setStep('brand')}
                 disabled={isSubmitting}
+                className='flex-1 bg-transparent border-white/30 text-white hover:bg-white/10 cursor-pointer'
               >
-                <ArrowLeft className='h-4 w-4 mr-2' />
                 이전
               </Button>
               <Button
-                className='flex-1'
-                onClick={handleCreateBranch}
-                disabled={isSubmitting || !branchName.trim()}
+                className='flex-1 bg-white text-gray-900 hover:bg-white/90 cursor-pointer'
+                onClick={handleConfirmCreate}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
@@ -398,91 +342,54 @@ export default function OnboardingPage() {
                   </>
                 ) : (
                   <>
-                    완료
+                    확인
                     <Check className='h-4 w-4 ml-2' />
                   </>
                 )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step: 초대 코드 입력 */}
-      {step === 'invite' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
-              <Users className='h-5 w-5' />
-              초대 코드 입력
-            </CardTitle>
-            <CardDescription>
-              관리자로부터 받은 6자리 초대 코드를 입력해주세요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='inviteCode'>초대 코드</Label>
-              <Input
-                id='inviteCode'
-                placeholder='ABC123'
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                disabled={isSubmitting}
-                maxLength={6}
-                className='text-center text-2xl tracking-widest font-mono'
-              />
-            </div>
-
-            <div className='flex gap-2 pt-4'>
-              <Button
-                variant='outline'
-                onClick={() => setStep('role')}
-                disabled={isSubmitting}
-              >
-                <ArrowLeft className='h-4 w-4 mr-2' />
-                이전
-              </Button>
-              <Button
-                className='flex-1'
-                onClick={handleAcceptInvite}
-                disabled={isSubmitting || inviteCode.length !== 6}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                    확인 중...
-                  </>
-                ) : (
-                  <>
-                    참여하기
-                    <Check className='h-4 w-4 ml-2' />
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <p className='text-center text-sm text-muted-foreground pt-2'>
-              초대 코드가 없으신가요? 관리자에게 문의해주세요.
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </LiquidGlassCard>
       )}
 
       {/* Step: 완료 */}
       {step === 'complete' && (
-        <Card>
-          <CardContent className='py-12 text-center'>
-            <div className='mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4'>
-              <Check className='h-8 w-8 text-green-600' />
+        <LiquidGlassCard
+          blurIntensity='xl'
+          className='w-[400px] h-[620px] p-8 flex flex-col animate-in fade-in slide-in-from-right-4 duration-300'
+        >
+          <div className='flex-1 flex flex-col items-center justify-center py-8'>
+            <div className='w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4'>
+              <Check className='h-8 w-8 text-white' />
             </div>
-            <h2 className='text-2xl font-bold mb-2'>설정 완료!</h2>
-            <p className='text-muted-foreground'>
-              잠시 후 대시보드로 이동합니다...
-            </p>
-            <Loader2 className='h-5 w-5 animate-spin mx-auto mt-4 text-muted-foreground' />
-          </CardContent>
-        </Card>
+            <h2 className='text-2xl font-bold text-white mb-2'>설정 완료!</h2>
+            <p className='text-white/80'>잠시 후 대시보드로 이동합니다...</p>
+            <Loader2 className='h-5 w-5 animate-spin mt-4 text-white/80' />
+          </div>
+        </LiquidGlassCard>
+      )}
+
+      {/* 진행 표시 - 카드 밖 하단 */}
+      {step !== 'welcome' && (
+        <div className='flex justify-center'>
+          <div className='flex items-center gap-3 text-sm text-white/50'>
+            <span
+              className={
+                step === 'brand' || step === 'confirm'
+                  ? 'text-white font-medium'
+                  : ''
+              }
+            >
+              브랜드 설정
+            </span>
+            <ArrowRight className='h-4 w-4' />
+            <span
+              className={step === 'complete' ? 'text-white font-medium' : ''}
+            >
+              완료
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );
