@@ -86,11 +86,7 @@ export default function Home() {
   }, [isLoaded, isSignedIn, router]);
 
   if (!isLoaded) {
-    return (
-      <div className='flex h-screen items-center justify-center'>
-        Loading...
-      </div>
-    );
+    return null;
   }
 
   if (!isSignedIn) {
