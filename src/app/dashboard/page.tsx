@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className='p-4 md:p-6 space-y-6'>
+    <div className='p-8 space-y-8'>
       {/* 1. 핵심 지표 카드 - Priority 1 */}
       <Suspense fallback={<KPISkeleton />}>
         <SalesKPICards />

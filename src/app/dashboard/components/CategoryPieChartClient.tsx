@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Cell } from 'recharts';
+import { PieChartIcon } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -33,7 +34,7 @@ const ResponsiveContainer = dynamic(
   () => import('recharts').then((mod) => mod.ResponsiveContainer),
   {
     ssr: false,
-    loading: () => <Skeleton className='h-[300px] w-full' />
+    loading: () => <Skeleton className='h-[280px] w-full' />
   }
 );
 
@@ -47,15 +48,14 @@ type Props = {
   category30: CategoryBreakdown[];
 };
 
-// shadcn/ui 테마 기반 차트 색상
 const COLORS = [
-  '#E76F51', // chart-1: coral
-  '#2A9D8F', // chart-2: teal
-  '#264653', // chart-3: dark slate
-  '#E9C46A', // chart-4: gold
-  '#F4A261', // chart-5: sandy orange
-  '#6366F1', // indigo (추가)
-  '#EC4899', // pink (추가)
+  '#F97316', // orange-500
+  '#FB923C', // orange-400
+  '#FDBA74', // orange-300
+  '#FED7AA', // orange-200
+  '#EA580C', // orange-600
+  '#C2410C', // orange-700
+  '#9A3412', // orange-800
 ];
 
 const formatCurrency = (value: number) => {
@@ -73,20 +73,25 @@ export default function CategoryPieChartClient({ category7, category30 }: Props)
   const data = period === 7 ? category7 : category30;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className='rounded-2xl backdrop-blur-xl backdrop-saturate-150 border border-white/50 bg-white/70 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_16px_48px_rgba(0,0,0,0.1)] hover:translate-y-[-2px] hover:bg-white/80'>
+      <CardHeader className='pb-2'>
         <div className='flex items-center justify-between'>
-          <CardTitle>카테고리별 매출</CardTitle>
+          <CardTitle className='flex items-center gap-2 text-base font-semibold'>
+            <div className='rounded-lg bg-orange-100 p-1.5'>
+              <PieChartIcon className='h-4 w-4 text-orange-600' />
+            </div>
+            카테고리별 매출
+          </CardTitle>
           <PeriodToggle
             value={period}
             onChange={setPeriod}
             options={PERIOD_OPTIONS_7_30}
           />
         </div>
-        <CardDescription>최근 {period}일간 매출 비중</CardDescription>
+        <CardDescription className='text-xs'>최근 {period}일간 매출 비중</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className='h-[300px] flex items-center justify-center'>
+      <CardContent className='pt-2'>
+        <div className='h-[280px] flex items-center justify-center'>
           <ResponsiveContainer width='100%' height='100%'>
             <PieChart>
               <Pie
@@ -97,10 +102,12 @@ export default function CategoryPieChartClient({ category7, category30 }: Props)
                 label={({ name, percent }) =>
                   `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
                 }
-                outerRadius={100}
+                outerRadius={90}
+                innerRadius={50}
                 fill='#8884d8'
                 dataKey='total'
                 nameKey='category'
+                paddingAngle={2}
               >
                 {data.map((_, index) => (
                   <Cell
@@ -109,8 +116,20 @@ export default function CategoryPieChartClient({ category7, category30 }: Props)
                   />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              <Legend />
+              <Tooltip
+                formatter={(value) => formatCurrency(Number(value))}
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: '1px solid #f0f0f0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
+              />
+              <Legend
+                verticalAlign='bottom'
+                height={36}
+                iconType='circle'
+                iconSize={8}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>

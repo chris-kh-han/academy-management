@@ -17,15 +17,15 @@ export default function PeriodToggle<T extends string | number>({
   options,
 }: PeriodToggleProps<T>) {
   return (
-    <div className='flex gap-1 rounded-lg bg-muted p-1'>
+    <div className='flex gap-0.5 rounded-lg bg-slate-100 p-0.5'>
       {options.map((option) => (
         <button
           key={option.value}
           onClick={() => onChange(option.value)}
-          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
             value === option.value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'bg-white text-primary shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           {option.label}

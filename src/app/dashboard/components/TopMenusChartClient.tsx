@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { TrendingUp } from 'lucide-react';
+import { Award } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -29,10 +29,6 @@ const YAxis = dynamic(
   () => import('recharts').then((mod) => mod.YAxis),
   { ssr: false }
 );
-const CartesianGrid = dynamic(
-  () => import('recharts').then((mod) => mod.CartesianGrid),
-  { ssr: false }
-);
 const Tooltip = dynamic(
   () => import('recharts').then((mod) => mod.Tooltip),
   { ssr: false }
@@ -41,7 +37,7 @@ const ResponsiveContainer = dynamic(
   () => import('recharts').then((mod) => mod.ResponsiveContainer),
   {
     ssr: false,
-    loading: () => <Skeleton className='h-[300px] w-full' />
+    loading: () => <Skeleton className='h-[280px] w-full' />
   }
 );
 
@@ -65,11 +61,13 @@ export default function TopMenusChartClient({ topMenus7, topMenus30 }: Props) {
   const data = period === 7 ? topMenus7 : topMenus30;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className='rounded-2xl backdrop-blur-xl backdrop-saturate-150 border border-white/50 bg-white/70 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_16px_48px_rgba(0,0,0,0.1)] hover:translate-y-[-2px] hover:bg-white/80'>
+      <CardHeader className='pb-2'>
         <div className='flex items-center justify-between'>
-          <CardTitle className='flex items-center gap-2'>
-            <TrendingUp className='h-5 w-5' />
+          <CardTitle className='flex items-center gap-2 text-base font-semibold'>
+            <div className='rounded-lg bg-amber-100 p-1.5'>
+              <Award className='h-4 w-4 text-amber-600' />
+            </div>
             인기 메뉴 TOP 5
           </CardTitle>
           <PeriodToggle
@@ -78,22 +76,40 @@ export default function TopMenusChartClient({ topMenus7, topMenus30 }: Props) {
             options={PERIOD_OPTIONS_7_30}
           />
         </div>
-        <CardDescription>최근 {period}일 판매 수량 기준</CardDescription>
+        <CardDescription className='text-xs'>최근 {period}일 판매 수량 기준</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className='h-[300px]'>
+      <CardContent className='pt-2'>
+        <div className='h-[280px]'>
           <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={data} layout='vertical'>
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis type='number' />
+            <BarChart data={data} layout='vertical' barCategoryGap='20%'>
+              <XAxis
+                type='number'
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: '#888' }}
+              />
               <YAxis
                 type='category'
                 dataKey='menu_name'
-                width={100}
-                tick={{ fontSize: 12 }}
+                width={90}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#555' }}
               />
-              <Tooltip formatter={(value) => [`${value}개`, '판매량']} />
-              <Bar dataKey='sales_count' fill='#00C49F' radius={[0, 4, 4, 0]} />
+              <Tooltip
+                formatter={(value) => [`${value}개`, '판매량']}
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: '1px solid #f0f0f0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
+              />
+              <Bar
+                dataKey='sales_count'
+                fill='#FB923C'
+                radius={[0, 6, 6, 0]}
+                background={{ fill: '#f5f5f5', radius: 6 }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

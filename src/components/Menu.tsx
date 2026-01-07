@@ -26,10 +26,11 @@ export default function Menu() {
           key={menu.path}
           href={menu.path}
           className='
-            px-4 py-3 rounded-lg
+            px-4 py-3 rounded-lg cursor-pointer
             bg-card text-card-foreground
-            hover:bg-primary hover:text-primary-foreground
+            hover:bg-orange-100/50 hover:text-orange-600
             border border-border
+            transition-colors duration-200
           '
         >
           {menu.label}

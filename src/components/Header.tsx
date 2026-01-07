@@ -13,6 +13,17 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import BranchSwitcher from '@/components/BranchSwitcher';
@@ -37,7 +48,7 @@ const menuItems: MenuItem[] = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { userRole, user } = useBranch();
+  const { userRole } = useBranch();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -65,39 +76,9 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 모바일: 사용자 메뉴 + 드롭다운 메뉴 */}
+      {/* 모바일 메뉴 */}
       <div className='flex items-center gap-2'>
-        {/* 사용자 드롭다운 */}
-        {mounted && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='sm' className='gap-2'>
-                <span className='hidden sm:inline text-sm'>
-                  {user?.email?.split('@')[0]}
-                </span>
-                <div className='w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-sm font-medium'>
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                {user?.email}
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <form action={signOut}>
-                  <button type='submit' className='flex items-center gap-2 w-full'>
-                    <LogOut className='h-4 w-4' />
-                    로그아웃
-                  </button>
-                </form>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        {/* 모바일 메뉴 */}
+        {/* 모바일 햄버거 메뉴 */}
         <div className='block md:hidden'>
           {mounted && (
             <DropdownMenu>
@@ -126,6 +107,34 @@ export default function Header() {
                     </DropdownMenuItem>
                   );
                 })}
+                <DropdownMenuSeparator />
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
+                      className='flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600'
+                    >
+                      <LogOut className='h-4 w-4' />
+                      로그아웃
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>로그아웃</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        정말 로그아웃 하시겠습니까?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>취소</AlertDialogCancel>
+                      <form action={signOut}>
+                        <AlertDialogAction type='submit' className='bg-red-500 hover:bg-red-600'>
+                          로그아웃
+                        </AlertDialogAction>
+                      </form>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
