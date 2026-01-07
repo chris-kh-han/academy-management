@@ -616,13 +616,13 @@ const featureDemoData: Record<string, FeatureDemoData> = {
 
 function CarouselPreview({ screens, currentIndex }: { screens: MockupScreen[]; currentIndex: number }) {
   return (
-    <div className='relative overflow-hidden'>
+    <div className='relative overflow-hidden w-full'>
       <div
         className='flex transition-transform duration-300 ease-out'
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {screens.map((screen, i) => (
-          <div key={i} className='w-full flex-shrink-0'>
+          <div key={i} className='w-full flex-shrink-0 min-w-0'>
             {screen.content}
           </div>
         ))}
@@ -713,7 +713,7 @@ export default function FeatureDemo({ features }: { features: Feature[] }) {
       </div>
 
       <Dialog open={!!selectedFeature} onOpenChange={closeFeatureDemo}>
-        <DialogContent className='sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
+        <DialogContent className='sm:max-w-2xl'>
           {demoData && (
             <>
               <DialogHeader>
@@ -728,7 +728,7 @@ export default function FeatureDemo({ features }: { features: Feature[] }) {
                 </div>
               </DialogHeader>
 
-              <div className='grid md:grid-cols-2 gap-6 mt-4'>
+              <div className='flex flex-col-reverse md:grid md:grid-cols-2 gap-6 mt-4 w-full max-w-full overflow-hidden'>
                 {/* Highlights - 클릭하면 해당 화면으로 이동 */}
                 <div className='space-y-3'>
                   <h4 className='font-medium text-slate-900'>주요 기능</h4>
@@ -754,24 +754,24 @@ export default function FeatureDemo({ features }: { features: Feature[] }) {
                 </div>
 
                 {/* Carousel Preview */}
-                <div>
+                <div className='min-w-0 overflow-hidden'>
                   <div className='flex items-center justify-between mb-3'>
                     <h4 className='font-medium text-slate-900'>미리보기</h4>
                     <div className='flex items-center gap-2'>
                       <button
                         onClick={goToPrev}
-                        className='p-1 rounded-full hover:bg-slate-100 transition'
+                        className='p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer'
                       >
-                        <ChevronLeft className='w-4 h-4 text-slate-600' />
+                        <ChevronLeft className='w-5 h-5 text-slate-600' />
                       </button>
                       <span className='text-xs text-slate-500'>
                         {currentScreenIndex + 1} / {demoData.screens.length}
                       </span>
                       <button
                         onClick={goToNext}
-                        className='p-1 rounded-full hover:bg-slate-100 transition'
+                        className='p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer'
                       >
-                        <ChevronRight className='w-4 h-4 text-slate-600' />
+                        <ChevronRight className='w-5 h-5 text-slate-600' />
                       </button>
                     </div>
                   </div>
@@ -783,7 +783,7 @@ export default function FeatureDemo({ features }: { features: Feature[] }) {
                         key={i}
                         onClick={() => goToScreen(i)}
                         className={`
-                          w-2 h-2 rounded-full transition-all
+                          w-2 h-2 rounded-full transition-all cursor-pointer
                           ${currentScreenIndex === i ? 'bg-orange-500 w-4' : 'bg-slate-300 hover:bg-slate-400'}
                         `}
                       />
@@ -795,12 +795,12 @@ export default function FeatureDemo({ features }: { features: Feature[] }) {
               {/* CTA */}
               <div className='mt-6 pt-4 border-t flex flex-col sm:flex-row gap-3 justify-center'>
                 <AuthModal mode='sign-up'>
-                  <button className='px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition'>
+                  <button className='px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition shadow-lg cursor-pointer'>
                     무료로 시작하기
                   </button>
                 </AuthModal>
                 <AuthModal mode='sign-in'>
-                  <button className='px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition'>
+                  <button className='px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition shadow-lg cursor-pointer'>
                     로그인
                   </button>
                 </AuthModal>

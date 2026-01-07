@@ -46,7 +46,7 @@ export function SignInForm({ onSuccess }: { onSuccess?: () => void }) {
         />
       </div>
       {error && <p className='text-sm text-red-500'>{error}</p>}
-      <Button type='submit' className='w-full' disabled={loading}>
+      <Button type='submit' className='w-full shadow-lg cursor-pointer bg-orange-500 hover:bg-orange-600' disabled={loading}>
         {loading ? '로그인 중...' : '로그인'}
       </Button>
     </form>

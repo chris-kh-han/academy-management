@@ -47,7 +47,7 @@ export function SignUpForm({ onSuccess }: { onSuccess?: () => void }) {
         />
       </div>
       {error && <p className='text-sm text-red-500'>{error}</p>}
-      <Button type='submit' className='w-full' disabled={loading}>
+      <Button type='submit' className='w-full shadow-lg cursor-pointer bg-emerald-500 hover:bg-emerald-600' disabled={loading}>
         {loading ? '가입 중...' : '회원가입'}
       </Button>
     </form>

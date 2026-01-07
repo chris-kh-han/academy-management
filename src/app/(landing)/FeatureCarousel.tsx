@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const showcaseScreens = [
@@ -22,10 +22,15 @@ const showcaseScreens = [
             <div key={item.name} className='bg-slate-50 rounded-lg p-3'>
               <p className='text-xs text-slate-500'>{item.name}</p>
               <p className='text-lg font-semibold'>{item.qty}</p>
-              <div className={`h-1 rounded mt-2 ${
-                item.status === 'good' ? 'bg-emerald-400' :
-                item.status === 'warning' ? 'bg-amber-400' : 'bg-red-400'
-              }`} />
+              <div
+                className={`h-1 rounded mt-2 ${
+                  item.status === 'good'
+                    ? 'bg-emerald-400'
+                    : item.status === 'warning'
+                    ? 'bg-amber-400'
+                    : 'bg-red-400'
+                }`}
+              />
             </div>
           ))}
         </div>
@@ -39,7 +44,9 @@ const showcaseScreens = [
       <div className='bg-white rounded-xl p-4 shadow-lg'>
         <div className='flex items-center justify-between mb-3'>
           <span className='text-sm font-medium text-slate-700'>아메리카노</span>
-          <span className='px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full'>판매중</span>
+          <span className='px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full'>
+            판매중
+          </span>
         </div>
         <div className='space-y-2 mb-3'>
           {[
@@ -47,7 +54,10 @@ const showcaseScreens = [
             { name: '정수물 150ml', cost: '50원' },
             { name: '얼음 100g', cost: '100원' },
           ].map((ing) => (
-            <div key={ing.name} className='flex items-center justify-between text-xs bg-slate-50 p-2 rounded'>
+            <div
+              key={ing.name}
+              className='flex items-center justify-between text-xs bg-slate-50 p-2 rounded'
+            >
               <span className='text-slate-600'>{ing.name}</span>
               <span className='text-slate-700'>{ing.cost}</span>
             </div>
@@ -75,7 +85,9 @@ const showcaseScreens = [
     title: '인기 메뉴 TOP 5',
     content: (
       <div className='bg-white rounded-xl p-4 shadow-lg'>
-        <span className='text-sm font-medium text-slate-700'>인기 메뉴 TOP 5</span>
+        <span className='text-sm font-medium text-slate-700'>
+          인기 메뉴 TOP 5
+        </span>
         <div className='mt-3 space-y-2'>
           {[
             { rank: 1, name: '아메리카노', sales: 145, pct: 100 },
@@ -90,9 +102,14 @@ const showcaseScreens = [
               </span>
               <span className='flex-1 text-xs'>{menu.name}</span>
               <div className='w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden'>
-                <div className='h-full bg-orange-400' style={{ width: `${menu.pct}%` }} />
+                <div
+                  className='h-full bg-orange-400'
+                  style={{ width: `${menu.pct}%` }}
+                />
               </div>
-              <span className='text-[10px] text-slate-500 w-8 text-right'>{menu.sales}건</span>
+              <span className='text-[10px] text-slate-500 w-8 text-right'>
+                {menu.sales}건
+              </span>
             </div>
           ))}
         </div>
@@ -114,10 +131,21 @@ const showcaseScreens = [
             { name: '설탕', current: '8kg', min: '10kg', urgent: false },
             { name: '우유', current: '2L', min: '5L', urgent: true },
           ].map((item) => (
-            <div key={item.name} className={`bg-slate-50 rounded-lg p-2 border-l-2 ${item.urgent ? 'border-red-400' : 'border-amber-400'}`}>
+            <div
+              key={item.name}
+              className={`bg-slate-50 rounded-lg p-2 border-l-2 ${
+                item.urgent ? 'border-red-400' : 'border-amber-400'
+              }`}
+            >
               <div className='flex items-center justify-between'>
                 <span className='font-medium text-xs'>{item.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${item.urgent ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    item.urgent
+                      ? 'bg-red-100 text-red-600'
+                      : 'bg-amber-100 text-amber-600'
+                  }`}
+                >
                   {item.urgent ? '긴급' : '주의'}
                 </span>
               </div>
@@ -137,16 +165,24 @@ const showcaseScreens = [
     content: (
       <div className='bg-white rounded-xl p-4 shadow-lg'>
         <div className='flex items-center justify-between mb-3'>
-          <span className='text-sm font-medium text-slate-700'>오늘의 매출</span>
+          <span className='text-sm font-medium text-slate-700'>
+            오늘의 매출
+          </span>
           <span className='text-xs text-emerald-600'>+12.5%</span>
         </div>
         <div className='bg-orange-50 rounded-lg p-3 text-center mb-3'>
           <p className='text-2xl font-bold text-orange-600'>1,234,500원</p>
-          <p className='text-[10px] text-slate-500 mt-1'>주문 87건 | 객단가 14,190원</p>
+          <p className='text-[10px] text-slate-500 mt-1'>
+            주문 87건 | 객단가 14,190원
+          </p>
         </div>
         <div className='h-16 bg-slate-50 rounded-lg flex items-end p-2 gap-1'>
           {[40, 65, 45, 80, 60, 90, 75].map((h, i) => (
-            <div key={i} className='flex-1 bg-orange-400 rounded-t' style={{ height: `${h}%` }} />
+            <div
+              key={i}
+              className='flex-1 bg-orange-400 rounded-t'
+              style={{ height: `${h}%` }}
+            />
           ))}
         </div>
       </div>
@@ -158,7 +194,9 @@ const showcaseScreens = [
     content: (
       <div className='bg-white rounded-xl p-4 shadow-lg'>
         <div className='flex items-center justify-between mb-3'>
-          <span className='text-sm font-medium text-slate-700'>손익 계산서</span>
+          <span className='text-sm font-medium text-slate-700'>
+            손익 계산서
+          </span>
           <span className='text-xs text-slate-500'>2025년 1월</span>
         </div>
         <div className='space-y-1'>
@@ -169,9 +207,24 @@ const showcaseScreens = [
             { label: '판관비', value: '-12,168,750', type: 'cost' },
             { label: '영업이익', value: '9,735,000', type: 'net' },
           ].map((row) => (
-            <div key={row.label} className={`flex justify-between p-2 rounded text-xs ${row.type === 'net' ? 'bg-orange-50' : 'bg-slate-50'}`}>
-              <span className={row.type === 'net' ? 'font-bold' : ''}>{row.label}</span>
-              <span className={row.type === 'cost' ? 'text-red-600' : row.type === 'net' ? 'text-orange-600 font-bold' : ''}>
+            <div
+              key={row.label}
+              className={`flex justify-between p-2 rounded text-xs ${
+                row.type === 'net' ? 'bg-orange-50' : 'bg-slate-50'
+              }`}
+            >
+              <span className={row.type === 'net' ? 'font-bold' : ''}>
+                {row.label}
+              </span>
+              <span
+                className={
+                  row.type === 'cost'
+                    ? 'text-red-600'
+                    : row.type === 'net'
+                    ? 'text-orange-600 font-bold'
+                    : ''
+                }
+              >
                 {row.value}원
               </span>
             </div>
@@ -185,6 +238,7 @@ const showcaseScreens = [
 export default function FeatureCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 자동 슬라이드 (2초 간격)
   useEffect(() => {
@@ -197,20 +251,44 @@ export default function FeatureCarousel() {
     return () => clearInterval(timer);
   }, [isAutoPlaying]);
 
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 5초 후 자동재생 재개
+  const scheduleResumeAutoPlay = () => {
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+    }
+    resumeTimerRef.current = setTimeout(() => {
+      setIsAutoPlaying(true);
+    }, 5000);
+  };
+
   const handlePrev = () => {
     setIsAutoPlaying(false);
-    setCurrentIndex((prev) => (prev - 1 + showcaseScreens.length) % showcaseScreens.length);
+    setCurrentIndex(
+      (prev) => (prev - 1 + showcaseScreens.length) % showcaseScreens.length,
+    );
+    scheduleResumeAutoPlay();
   };
 
   const handleNext = () => {
     setIsAutoPlaying(false);
     setCurrentIndex((prev) => (prev + 1) % showcaseScreens.length);
+    scheduleResumeAutoPlay();
   };
 
   const handleDotClick = (index: number) => {
     if (index === currentIndex) return;
     setIsAutoPlaying(false);
     setCurrentIndex(index);
+    scheduleResumeAutoPlay();
   };
 
   return (
@@ -225,16 +303,16 @@ export default function FeatureCarousel() {
 
         {/* Carousel Container */}
         <div className='relative'>
-          {/* Navigation Buttons */}
+          {/* Navigation Buttons - hidden on mobile */}
           <button
             onClick={handlePrev}
-            className='absolute left-2 md:left-8 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/90 rounded-full shadow-lg hover:bg-white hover:scale-110 transition-all duration-300'
+            className='hidden md:block absolute left-8 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/90 rounded-full shadow-lg hover:bg-white hover:scale-110 transition-all duration-300 opacity-50 cursor-pointer'
           >
             <ChevronLeft className='w-5 h-5 text-slate-700' />
           </button>
           <button
             onClick={handleNext}
-            className='absolute right-2 md:right-8 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/90 rounded-full shadow-lg hover:bg-white hover:scale-110 transition-all duration-300'
+            className='hidden md:block absolute right-8 top-1/2 -translate-y-1/2 z-20 p-3 bg-white/90 rounded-full shadow-lg hover:bg-white hover:scale-110 transition-all duration-300 opacity-50 cursor-pointer'
           >
             <ChevronRight className='w-5 h-5 text-slate-700' />
           </button>
@@ -247,8 +325,10 @@ export default function FeatureCarousel() {
             {showcaseScreens.map((screen, idx) => {
               // 현재 인덱스와의 거리 계산 (순환 고려)
               let distance = idx - currentIndex;
-              if (distance > showcaseScreens.length / 2) distance -= showcaseScreens.length;
-              if (distance < -showcaseScreens.length / 2) distance += showcaseScreens.length;
+              if (distance > showcaseScreens.length / 2)
+                distance -= showcaseScreens.length;
+              if (distance < -showcaseScreens.length / 2)
+                distance += showcaseScreens.length;
 
               const isActive = distance === 0;
               const isVisible = Math.abs(distance) <= 1; // 현재 + 좌우 1개씩 = 총 3개
@@ -272,7 +352,9 @@ export default function FeatureCarousel() {
                       rotateY(${rotateY}deg)
                       scale(${scale})
                     `,
-                    opacity: isActive ? 1 : Math.max(0.3, 0.7 - Math.abs(distance) * 0.2),
+                    opacity: isActive
+                      ? 1
+                      : Math.max(0.3, 0.7 - Math.abs(distance) * 0.2),
                     zIndex: 10 - Math.abs(distance),
                     transition: 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
                     transformStyle: 'preserve-3d',
@@ -283,14 +365,18 @@ export default function FeatureCarousel() {
                       className='mb-3 text-center'
                       style={{
                         opacity: isActive ? 1 : 0.4,
-                        transform: isActive ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.9)',
+                        transform: isActive
+                          ? 'translateY(0) scale(1)'
+                          : 'translateY(15px) scale(0.9)',
                         transition: 'all 0.5s ease-out',
                       }}
                     >
                       <span className='inline-block text-xs text-white/80 px-3 py-1 bg-white/20 rounded-full backdrop-blur-sm'>
                         {screen.category}
                       </span>
-                      <h3 className='text-white font-medium mt-2 text-lg'>{screen.title}</h3>
+                      <h3 className='text-white font-medium mt-2 text-lg'>
+                        {screen.title}
+                      </h3>
                     </div>
                     <div
                       className='rounded-xl overflow-hidden'
@@ -298,7 +384,9 @@ export default function FeatureCarousel() {
                         boxShadow: isActive
                           ? '0 25px 50px -12px rgba(251, 146, 60, 0.4), 0 0 30px rgba(251, 146, 60, 0.2)'
                           : '0 10px 30px -10px rgba(0, 0, 0, 0.3)',
-                        animation: isActive ? 'float 3s ease-in-out infinite' : 'none',
+                        animation: isActive
+                          ? 'float 3s ease-in-out infinite'
+                          : 'none',
                         transition: 'box-shadow 0.5s ease-out',
                       }}
                     >
@@ -310,18 +398,41 @@ export default function FeatureCarousel() {
             })}
           </div>
 
-          {/* Dots Indicator */}
-          <div className='flex justify-center gap-2 mt-6'>
-            {showcaseScreens.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => handleDotClick(i)}
-                className={`
-                  h-2 rounded-full transition-all duration-300
-                  ${currentIndex === i ? 'w-8 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'}
-                `}
-              />
-            ))}
+          {/* Dots Indicator with mobile navigation */}
+          <div className='flex justify-center items-center gap-4 mt-6'>
+            {/* Mobile prev button */}
+            <button
+              onClick={handlePrev}
+              className='md:hidden p-2 bg-white/20 rounded-full hover:bg-white/30 transition cursor-pointer'
+            >
+              <ChevronLeft className='w-5 h-5 text-white' />
+            </button>
+
+            {/* Dots */}
+            <div className='flex gap-2'>
+              {showcaseScreens.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleDotClick(i)}
+                  className={`
+                    h-2 rounded-full transition-all duration-300 cursor-pointer
+                    ${
+                      currentIndex === i
+                        ? 'w-8 bg-white'
+                        : 'w-2 bg-white/40 hover:bg-white/60'
+                    }
+                  `}
+                />
+              ))}
+            </div>
+
+            {/* Mobile next button */}
+            <button
+              onClick={handleNext}
+              className='md:hidden p-2 bg-white/20 rounded-full hover:bg-white/30 transition cursor-pointer'
+            >
+              <ChevronRight className='w-5 h-5 text-white' />
+            </button>
           </div>
         </div>
       </div>

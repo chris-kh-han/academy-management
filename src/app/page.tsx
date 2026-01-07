@@ -44,9 +44,9 @@ export default async function Home() {
         {/* Hero Section */}
         <header className='container mx-auto px-6 py-16 text-center'>
           <h1 className='text-white mb-8 font-(family-name:--font-do-hyeon)'>
-            <span className='text-[10rem] leading-none'>푸</span>
-            <span className='text-[6rem] leading-none mx-8'>&</span>
-            <span className='text-[12rem] leading-none'>B</span>
+            <span className='text-[8rem] leading-none'>푸</span>
+            <span className='text-[4rem] leading-none mx-8'>&</span>
+            <span className='text-[9rem] leading-none'>B</span>
           </h1>
           <p className='text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto'>
             재고, 레시피, 판매를 한 곳에서 관리하세요.
@@ -55,12 +55,12 @@ export default async function Home() {
           </p>
           <div className='flex gap-4 justify-center'>
             <AuthModal mode='sign-in'>
-              <button className='w-32 py-3 bg-white text-orange-600 rounded-lg font-medium hover:bg-orange-50 transition shadow-lg'>
+              <button className='w-32 py-3 bg-white text-orange-600 rounded-lg font-medium hover:bg-orange-50 transition shadow-lg cursor-pointer'>
                 로그인
               </button>
             </AuthModal>
             <AuthModal mode='sign-up'>
-              <button className='w-32 py-3 bg-transparent text-white rounded-lg font-medium border-2 border-white/50 hover:bg-white/10 transition'>
+              <button className='w-32 py-3 bg-transparent text-white rounded-lg font-medium border-2 border-white/50 hover:bg-white/10 transition shadow-lg cursor-pointer'>
                 회원가입
               </button>
             </AuthModal>
@@ -80,15 +80,15 @@ export default async function Home() {
       </div>
 
       {/* Footer */}
-      <footer className='bg-slate-50 text-slate-600'>
+      <footer className='bg-slate-100 text-slate-600'>
         <div className='container mx-auto px-6 py-12'>
           {/* Logo & Company Info */}
           <div className='flex flex-col lg:flex-row lg:justify-between gap-8 mb-8'>
             <div className='space-y-3'>
               <h3 className='text-xl font-bold text-slate-900'>푸&B</h3>
               <div className='text-sm space-y-1 text-slate-500'>
-                <p>대표: 홍길동 | 사업자등록번호: 123-45-67890</p>
-                <p>주소: 서울특별시 강남구 테헤란로 123, 4층</p>
+                <p>대표: 관희 | 사업자등록번호: 123-45-67890</p>
+                <p>주소: 원피스 신세계 하늘섬, 777층</p>
                 <p>고객센터: 1588-0000 (평일 09:00 - 18:00)</p>
                 <p>이메일: support@fnb-management.com</p>
               </div>
