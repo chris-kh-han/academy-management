@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LogOut } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -9,8 +10,20 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useBranch } from '@/contexts/BranchContext';
+import { signOut } from '@/app/auth/actions';
 
 type MenuItem = {
   label: string;
@@ -60,10 +73,10 @@ export default function AppSidebar() {
               }}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'px-4 py-3 rounded-lg border',
+                'px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200',
                 isActive
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-card text-card-foreground hover:bg-primary hover:text-primary-foreground',
+                  : 'bg-card text-card-foreground hover:bg-orange-100/50 hover:text-orange-600',
                 'border-border',
               )}
             >
@@ -73,7 +86,42 @@ export default function AppSidebar() {
         })}
       </SidebarHeader>
       <SidebarContent />
-      <SidebarFooter />
+      <SidebarFooter className='p-4'>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type='button'
+              className='
+                w-full px-4 py-3 rounded-lg border cursor-pointer
+                bg-card text-card-foreground
+                hover:bg-red-50 hover:text-red-600 hover:border-red-200
+                border-border
+                transition-colors duration-200
+                flex items-center justify-center gap-2
+              '
+            >
+              <LogOut className='w-4 h-4' />
+              로그아웃
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>로그아웃</AlertDialogTitle>
+              <AlertDialogDescription>
+                정말 로그아웃 하시겠습니까?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <form action={signOut}>
+                <AlertDialogAction type='submit' className='bg-red-500 hover:bg-red-600'>
+                  로그아웃
+                </AlertDialogAction>
+              </form>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SidebarFooter>
     </Sidebar>
   );
 }
