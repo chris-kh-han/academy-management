@@ -13,12 +13,12 @@ import {
 import PeriodToggle, { PERIOD_OPTIONS_7_30 } from '@/components/PeriodToggle';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const LineChart = dynamic(
-  () => import('recharts').then((mod) => mod.LineChart),
+const AreaChart = dynamic(
+  () => import('recharts').then((mod) => mod.AreaChart),
   { ssr: false }
 );
-const Line = dynamic(
-  () => import('recharts').then((mod) => mod.Line),
+const Area = dynamic(
+  () => import('recharts').then((mod) => mod.Area),
   { ssr: false }
 );
 const XAxis = dynamic(
@@ -41,7 +41,7 @@ const ResponsiveContainer = dynamic(
   () => import('recharts').then((mod) => mod.ResponsiveContainer),
   {
     ssr: false,
-    loading: () => <Skeleton className='h-[300px] w-full' />
+    loading: () => <Skeleton className='h-[280px] w-full' />
   }
 );
 
@@ -76,11 +76,13 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
   const data = period === 7 ? trend7 : trend30;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className='rounded-2xl backdrop-blur-xl backdrop-saturate-150 border border-white/50 bg-white/70 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_16px_48px_rgba(0,0,0,0.1)] hover:translate-y-[-2px] hover:bg-white/80'>
+      <CardHeader className='pb-2'>
         <div className='flex items-center justify-between'>
-          <CardTitle className='flex items-center gap-2'>
-            <TrendingUp className='h-5 w-5' />
+          <CardTitle className='flex items-center gap-2 text-base font-semibold'>
+            <div className='rounded-lg bg-primary/10 p-1.5'>
+              <TrendingUp className='h-4 w-4 text-primary' />
+            </div>
             일별 매출 추이
           </CardTitle>
           <PeriodToggle
@@ -89,27 +91,52 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
             options={PERIOD_OPTIONS_7_30}
           />
         </div>
-        <CardDescription>최근 {period}일간 매출</CardDescription>
+        <CardDescription className='text-xs'>최근 {period}일간 매출</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className='h-[300px]'>
+      <CardContent className='pt-2'>
+        <div className='h-[280px]'>
           <ResponsiveContainer width='100%' height='100%'>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis dataKey='date' tickFormatter={formatDate} />
-              <YAxis tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`} />
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id='salesGradient' x1='0' y1='0' x2='0' y2='1'>
+                  <stop offset='5%' stopColor='#F97316' stopOpacity={0.3} />
+                  <stop offset='95%' stopColor='#F97316' stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' vertical={false} />
+              <XAxis
+                dataKey='date'
+                tickFormatter={formatDate}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: '#888' }}
+              />
+              <YAxis
+                tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 11, fill: '#888' }}
+                width={45}
+              />
               <Tooltip
                 formatter={(value) => [formatCurrency(Number(value)), '매출']}
                 labelFormatter={(label) => formatDate(String(label))}
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: '1px solid #f0f0f0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                }}
               />
-              <Line
+              <Area
                 type='monotone'
                 dataKey='total'
-                stroke='#0088FE'
+                stroke='#F97316'
                 strokeWidth={2}
-                dot={{ fill: '#0088FE' }}
+                fill='url(#salesGradient)'
+                dot={{ fill: '#F97316', strokeWidth: 0, r: 3 }}
+                activeDot={{ fill: '#F97316', strokeWidth: 0, r: 5 }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
