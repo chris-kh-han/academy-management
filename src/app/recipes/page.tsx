@@ -7,6 +7,7 @@ import {
   getAllMenuCategories,
 } from '@/utils/supabase/supabase';
 import { MenuBoard } from './_components/MenuBoard';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,7 @@ const Recipes = async () => {
     getAllMenus(),
     getAllMenuOptions(),
     getAllMenuCategories(),
+    minDelay(),
   ]);
 
   const grouped = (recipes ?? []).reduce(

@@ -5,6 +5,7 @@ import {
 } from '@/utils/supabase/supabase';
 import { InventoryContent } from './components/InventoryContent';
 import { Ingredient } from './components/IngredientsTable';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ const Inventory = async () => {
     getAllIngredients(),
     getStockMovements(),
     getStockMovementsSummary(),
+    minDelay(),
   ]);
 
   const tableData: Ingredient[] = (ingredients ?? []).map((item) => ({

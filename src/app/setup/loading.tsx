@@ -1,5 +1,5 @@
 import { PageLoading } from '@/components/skeletons/PageSkeletons';
 
-export default function DashboardLoading() {
+export default function SetupLoading() {
   return <PageLoading />;
 }

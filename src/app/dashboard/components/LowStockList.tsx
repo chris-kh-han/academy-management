@@ -13,7 +13,7 @@ export default async function LowStockList() {
   const hasLowStock = lowStockItems && lowStockItems.length > 0;
 
   return (
-    <Card className='rounded-2xl backdrop-blur-xl backdrop-saturate-150 border border-white/50 bg-white/70 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_16px_48px_rgba(0,0,0,0.1)] hover:translate-y-[-2px] hover:bg-white/80'>
+    <Card className='liquid-glass liquid-glass-hover rounded-2xl'>
       <CardHeader className='pb-2'>
         <CardTitle className='flex items-center gap-2 text-base font-semibold'>
           <div className={`rounded-lg p-1.5 ${hasLowStock ? 'bg-red-100' : 'bg-emerald-100'}`}>

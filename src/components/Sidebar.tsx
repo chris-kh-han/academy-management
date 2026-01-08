@@ -41,7 +41,6 @@ const menuItems: MenuItem[] = [
   // { label: '근태 관리', path: '/attendance' },
   // { label: '급여 관리', path: '/payroll' },
   { label: '설정', path: '/settings' },
-  { label: '초기 설정', path: '/setup', adminOnly: true },
 ];
 
 export default function AppSidebar() {

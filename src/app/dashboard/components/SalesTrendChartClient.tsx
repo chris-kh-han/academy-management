@@ -76,7 +76,7 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
   const data = period === 7 ? trend7 : trend30;
 
   return (
-    <Card className='rounded-2xl backdrop-blur-xl backdrop-saturate-150 border border-white/50 bg-white/70 shadow-[0_8px_32px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_16px_48px_rgba(0,0,0,0.1)] hover:translate-y-[-2px] hover:bg-white/80'>
+    <Card className='liquid-glass liquid-glass-hover rounded-2xl'>
       <CardHeader className='pb-2'>
         <div className='flex items-center justify-between'>
           <CardTitle className='flex items-center gap-2 text-base font-semibold'>

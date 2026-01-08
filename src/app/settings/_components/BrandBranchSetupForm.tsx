@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -11,13 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
-import { Copy, Check, Building2, Store, Loader2 } from 'lucide-react';
+import { Building2, Store, Loader2 } from 'lucide-react';
 import { useBranch } from '@/contexts/BranchContext';
 
-export default function SetupPage() {
-  const { user, isInitialized } = useBranch();
-  const [copied, setCopied] = useState(false);
+export default function BrandBranchSetupForm() {
+  const { userRole, refreshContext } = useBranch();
   const [isCreating, setIsCreating] = useState(false);
 
   // 브랜드 생성 폼
@@ -28,14 +27,8 @@ export default function SetupPage() {
   const [branchName, setBranchName] = useState('');
   const [branchSlug, setBranchSlug] = useState('');
 
-  const copyUserId = async () => {
-    if (user?.id) {
-      await navigator.clipboard.writeText(user.id);
-      setCopied(true);
-      toast.success('User ID가 클립보드에 복사되었습니다');
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  // owner 또는 admin인지 확인
+  const isOwnerOrAdmin = userRole === 'owner' || userRole === 'admin';
 
   const handleCreateBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +51,7 @@ export default function SetupPage() {
       toast.success(`브랜드 "${brandName}"이(가) 생성되었습니다!`);
       setBrandName('');
       setBrandSlug('');
-      // 페이지 새로고침하여 상태 업데이트
-      window.location.reload();
+      await refreshContext();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : '브랜드 생성 실패');
     } finally {
@@ -88,7 +80,7 @@ export default function SetupPage() {
       toast.success(`지점 "${branchName}"이(가) 생성되었습니다!`);
       setBranchName('');
       setBranchSlug('');
-      window.location.reload();
+      await refreshContext();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : '지점 생성 실패');
     } finally {
@@ -119,71 +111,21 @@ export default function SetupPage() {
     }
   }, [branchName]);
 
-  if (!isInitialized) {
+  if (!isOwnerOrAdmin) {
     return (
-      <div className='flex items-center justify-center min-h-[400px]'>
-        <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>브랜드/지점 관리</CardTitle>
+          <CardDescription>
+            이 기능은 Owner 또는 Admin 권한이 필요합니다.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
   return (
-    <div className='container max-w-4xl py-8 space-y-8'>
-      <div>
-        <h1 className='text-3xl font-bold'>초기 설정</h1>
-        <p className='text-muted-foreground mt-2'>
-          브랜드와 지점을 설정하여 시작하세요
-        </p>
-      </div>
-
-      {/* 현재 사용자 정보 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>현재 로그인 정보</CardTitle>
-          <CardDescription>
-            이 정보를 사용하여 DB에서 사용자를 식별합니다
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div>
-              <Label className='text-muted-foreground text-sm'>이름</Label>
-              <p className='font-medium'>
-                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || '-'}
-              </p>
-            </div>
-            <div>
-              <Label className='text-muted-foreground text-sm'>이메일</Label>
-              <p className='font-medium'>{user?.email || '-'}</p>
-            </div>
-          </div>
-
-          <div>
-            <Label className='text-muted-foreground text-sm'>Supabase User ID</Label>
-            <div className='flex items-center gap-2 mt-1'>
-              <code className='flex-1 bg-muted px-3 py-2 rounded-md text-sm font-mono'>
-                {user?.id || '-'}
-              </code>
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={copyUserId}
-                disabled={!user?.id}
-              >
-                {copied ? (
-                  <Check className='h-4 w-4 text-green-500' />
-                ) : (
-                  <Copy className='h-4 w-4' />
-                )}
-              </Button>
-            </div>
-            <p className='text-xs text-muted-foreground mt-1'>
-              이 ID가 brands.owner_user_id, branch_members.user_id 등에 저장됩니다
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
+    <div className='space-y-6'>
       {/* 브랜드 생성 */}
       <Card>
         <CardHeader>
@@ -192,7 +134,8 @@ export default function SetupPage() {
             브랜드 생성
           </CardTitle>
           <CardDescription>
-            본사/프랜차이즈 브랜드를 생성합니다. 현재 로그인한 사용자가 Owner가 됩니다.
+            본사/프랜차이즈 브랜드를 생성합니다. 현재 로그인한 사용자가 Owner가
+            됩니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -213,7 +156,7 @@ export default function SetupPage() {
                   id='brandSlug'
                   placeholder='예: pizza-house'
                   value={brandSlug}
-                  onChange={(e) => setBranchSlug(e.target.value)}
+                  onChange={(e) => setBrandSlug(e.target.value)}
                 />
               </div>
             </div>
@@ -275,31 +218,6 @@ export default function SetupPage() {
               )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* SQL 가이드 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>수동 SQL 삽입 가이드</CardTitle>
-          <CardDescription>
-            Supabase 대시보드에서 직접 SQL을 실행할 수도 있습니다
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className='bg-muted p-4 rounded-md text-sm overflow-x-auto'>
-{`-- 1. 브랜드 생성 (현재 사용자가 owner)
-INSERT INTO brands (name, slug, owner_user_id)
-VALUES ('피자하우스', 'pizza-house', '${user?.id || 'YOUR_SUPABASE_USER_ID'}');
-
--- 2. 지점 생성 (brand_id는 위에서 생성된 ID로 대체)
-INSERT INTO branches (brand_id, name, slug)
-VALUES ('BRAND_UUID', '강남점', 'gangnam');
-
--- 3. 다른 직원 추가 (branch_id, user_id 대체 필요)
-INSERT INTO branch_members (branch_id, user_id, user_email, role, is_default)
-VALUES ('BRANCH_UUID', 'SUPABASE_USER_ID', 'staff@example.com', 'staff', true);`}
-          </pre>
         </CardContent>
       </Card>
     </div>

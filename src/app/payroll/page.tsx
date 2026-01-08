@@ -1,5 +1,6 @@
 import { getUserPermissions, getPayrolls, getSalarySettings } from '@/utils/supabase/supabase';
 import PayrollContent from './_components/PayrollContent';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function PayrollPage() {
     getUserPermissions(),
     getPayrolls(year, month),
     getSalarySettings(),
+    minDelay(),
   ]);
 
   return (

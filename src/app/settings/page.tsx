@@ -7,11 +7,13 @@ import ReportSettingsForm from './_components/ReportSettingsForm';
 import UserPermissionsForm from './_components/UserPermissionsForm';
 import NotificationSettingsForm from './_components/NotificationSettingsForm';
 import SystemSettingsForm from './_components/SystemSettingsForm';
+import BrandBranchSetupForm from './_components/BrandBranchSetupForm';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const settings = await getAllSettings();
+  const [settings] = await Promise.all([getAllSettings(), minDelay()]);
 
   return (
     <div className='container mx-auto p-4'>
@@ -29,6 +31,7 @@ export default async function SettingsPage() {
           <TabsTrigger value='users'>사용자/권한</TabsTrigger>
           <TabsTrigger value='notification'>알림</TabsTrigger>
           <TabsTrigger value='system'>시스템</TabsTrigger>
+          <TabsTrigger value='setup'>브랜드/지점</TabsTrigger>
         </TabsList>
 
         <TabsContent value='business'>
@@ -57,6 +60,10 @@ export default async function SettingsPage() {
 
         <TabsContent value='system'>
           <SystemSettingsForm initialData={settings.system} />
+        </TabsContent>
+
+        <TabsContent value='setup'>
+          <BrandBranchSetupForm />
         </TabsContent>
       </Tabs>
     </div>

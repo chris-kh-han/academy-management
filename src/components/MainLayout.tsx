@@ -42,7 +42,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
     <>
       <AppSidebar />
       <SidebarToggleButton />
-      <main className='flex-1 overflow-auto'>{children}</main>
+      <main className='flex-1 overflow-auto flex flex-col'>{children}</main>
     </>
   );
 }

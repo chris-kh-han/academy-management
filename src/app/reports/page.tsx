@@ -8,6 +8,7 @@ import {
   getStockMovementsSummary,
 } from '@/utils/supabase/supabase';
 import ReportsContent from './_components/ReportsContent';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function ReportsPage() {
     getTopMenus(10),
     getStockMovements(startDate, endDate),
     getStockMovementsSummary(startDate, endDate),
+    minDelay(),
   ]);
 
   return (

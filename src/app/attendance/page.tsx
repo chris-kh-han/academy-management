@@ -1,5 +1,6 @@
 import { getUserPermissions, getWorkRecords } from '@/utils/supabase/supabase';
 import AttendanceContent from './_components/AttendanceContent';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export default async function AttendancePage() {
   const [users, workRecords] = await Promise.all([
     getUserPermissions(),
     getWorkRecords(startDate, endDate),
+    minDelay(),
   ]);
 
   return (

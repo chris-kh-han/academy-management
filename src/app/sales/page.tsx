@@ -2,6 +2,7 @@ import { getSalesHistory, getUserContext } from '@/utils/supabase/supabase';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { SalesContent } from './_components/SalesContent';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,10 @@ export default async function SalesPage() {
   const branchId = context.currentBranch.id;
 
   // 판매 내역 가져오기
-  const salesData = await getSalesHistory(branchId);
+  const [salesData] = await Promise.all([
+    getSalesHistory(branchId),
+    minDelay(),
+  ]);
 
   return (
     <div className="p-4 md:p-6">

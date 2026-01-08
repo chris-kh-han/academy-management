@@ -13,21 +13,24 @@ import {
   ListSkeleton,
   TableSkeleton,
 } from './components/Skeletons';
+import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+  ] = await Promise.all([supabase.auth.getUser(), minDelay()]);
 
   if (!user) {
     redirect('/');
   }
 
   return (
-    <div className='p-8 space-y-8'>
+    <div className='flex-1 p-8 space-y-8 bg-slate-200'>
       {/* 1. 핵심 지표 카드 - Priority 1 */}
       <Suspense fallback={<KPISkeleton />}>
         <SalesKPICards />
