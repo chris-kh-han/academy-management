@@ -329,7 +329,7 @@ export type StockMovement = {
 };
 
 export type StockMovementInput = {
-  ingredient_id: number;
+  ingredient_id: string;
   movement_type: MovementType;
   quantity: number;
   unit_price?: number;

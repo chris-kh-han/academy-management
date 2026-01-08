@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBranch } from '@/contexts/BranchContext';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
@@ -53,13 +55,29 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const { currentBrand, isInitialized } = useBranch();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // 브랜드 없으면 온보딩으로 리다이렉트 (온보딩 페이지 제외)
+  useEffect(() => {
+    if (isInitialized && !currentBrand && pathname !== '/onboarding') {
+      router.replace('/onboarding');
+    }
+  }, [isInitialized, currentBrand, pathname, router]);
 
   if (!isInitialized) {
     return null;
   }
 
+  // 브랜드 없고 온보딩이 아니면 아무것도 렌더링하지 않음 (리다이렉트 중)
+  if (!currentBrand && pathname !== '/onboarding') {
+    return null;
+  }
+
   return (
-    <div className='flex flex-col h-screen bg-slate-100'>
+    <div
+      className={`flex flex-col h-screen ${currentBrand ? 'bg-slate-100' : 'bg-[#FA891A]'}`}
+    >
       <Header />
       {currentBrand ? (
         <SidebarProvider>

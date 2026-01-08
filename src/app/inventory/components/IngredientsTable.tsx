@@ -18,6 +18,12 @@ import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -35,6 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { MovementType } from '@/types';
 
 export type Ingredient = {
@@ -55,15 +62,23 @@ function getStockStatus(
   reorderPoint: number | null,
   safetyStock: number | null,
 ): { label: string; className: string } {
-  const reorder = reorderPoint ?? 10;
   const safety = safetyStock ?? 0;
 
+  // 품절
+  if (currentQty <= 0) {
+    return { label: '품절', className: 'bg-red-100 text-red-700' };
+  }
+
+  // 안전재고 이하 → 위험
   if (currentQty <= safety) {
     return { label: '위험', className: 'bg-red-100 text-red-700' };
   }
-  if (currentQty <= reorder) {
+
+  // 재주문점이 설정된 경우에만 부족 판단
+  if (reorderPoint !== null && currentQty <= reorderPoint) {
     return { label: '부족', className: 'bg-orange-100 text-orange-700' };
   }
+
   return { label: '정상', className: 'bg-green-100 text-green-700' };
 }
 
@@ -78,10 +93,15 @@ const formatCurrency = (value: number) => {
 
 type IngredientsTableProps = {
   data: Ingredient[];
-  onMovement?: (type: MovementType, ingredientId: number) => void;
+  onMovement?: (type: MovementType, ingredientId: string) => void;
+  onEdit?: (ingredient: Ingredient) => void;
 };
 
-export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
+export function IngredientsTable({ data, onMovement, onEdit }: IngredientsTableProps) {
+  const isMobile = useIsMobile();
+  const [selectedIngredient, setSelectedIngredient] =
+    React.useState<Ingredient | null>(null);
+
   const columns: ColumnDef<Ingredient>[] = React.useMemo(
     () => [
       {
@@ -136,7 +156,9 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
           <div className='text-center'>
             <Button
               variant='ghost'
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === 'asc')
+              }
             >
               현재 재고
               <ArrowUpDown className='ml-2 h-4 w-4' />
@@ -162,6 +184,19 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
           return (
             <div className='text-center'>
               {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'safety_stock',
+        header: '안전재고',
+        cell: ({ row }) => {
+          const safetyStock = row.getValue('safety_stock') as number | null;
+          const unit = row.original.unit || '';
+          return (
+            <div className='text-center'>
+              {safetyStock !== null ? `${safetyStock} ${unit}` : '-'}
             </div>
           );
         },
@@ -213,6 +248,11 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
               <DropdownMenuContent align='end'>
                 <DropdownMenuLabel>작업</DropdownMenuLabel>
                 <DropdownMenuItem
+                  onClick={() => onEdit?.(ingredient)}
+                >
+                  수정
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() =>
                     navigator.clipboard.writeText(ingredient.ingredient_id)
                   }
@@ -221,17 +261,17 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => onMovement?.('in', Number(ingredient.id))}
+                  onClick={() => onMovement?.('in', ingredient.id)}
                 >
                   입고 등록
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onMovement?.('out', Number(ingredient.id))}
+                  onClick={() => onMovement?.('out', ingredient.id)}
                 >
                   출고 등록
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onMovement?.('waste', Number(ingredient.id))}
+                  onClick={() => onMovement?.('waste', ingredient.id)}
                 >
                   폐기 등록
                 </DropdownMenuItem>
@@ -241,7 +281,7 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
         },
       },
     ],
-    [onMovement],
+    [onMovement, onEdit],
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -250,6 +290,22 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  // 모바일에서 컬럼 숨기기
+  React.useEffect(() => {
+    if (isMobile) {
+      setColumnVisibility({
+        select: false,
+        category: false,
+        reorder_point: false,
+        safety_stock: false,
+        price: false,
+        actions: false,
+      });
+    } else {
+      setColumnVisibility({});
+    }
+  }, [isMobile]);
 
   const table = useReactTable({
     data,
@@ -272,7 +328,7 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
 
   return (
     <div className='w-full'>
-      <div className='flex items-center py-4'>
+      <div className='flex items-center gap-2 py-4'>
         <Input
           placeholder='재료명 검색...'
           value={
@@ -280,9 +336,11 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
             ''
           }
           onChange={(event) =>
-            table.getColumn('ingredient_name')?.setFilterValue(event.target.value)
+            table
+              .getColumn('ingredient_name')
+              ?.setFilterValue(event.target.value)
           }
-          className='max-w-sm'
+          className='max-w-sm placeholder:text-gray-400'
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -344,6 +402,10 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  onClick={() =>
+                    isMobile && setSelectedIngredient(row.original)
+                  }
+                  className={isMobile ? 'cursor-pointer' : ''}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -392,6 +454,115 @@ export function IngredientsTable({ data, onMovement }: IngredientsTableProps) {
           </Button>
         </div>
       </div>
+
+      {/* 모바일 상세 정보 모달 */}
+      <Dialog
+        open={!!selectedIngredient}
+        onOpenChange={(open) => !open && setSelectedIngredient(null)}
+      >
+        <DialogContent className='sm:max-w-[500px] items-start content-start pt-8 gap-4'>
+          <DialogHeader>
+            <DialogTitle>{selectedIngredient?.ingredient_name}</DialogTitle>
+          </DialogHeader>
+          {selectedIngredient && (
+            <div className='grid gap-3'>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>카테고리</span>
+                <span className='col-span-3'>
+                  {selectedIngredient.category || '-'}
+                </span>
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>현재 재고</span>
+                <span className='col-span-3'>
+                  {selectedIngredient.current_qty} {selectedIngredient.unit}
+                </span>
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>재주문점</span>
+                <span className='col-span-3'>
+                  {selectedIngredient.reorder_point !== null
+                    ? `${selectedIngredient.reorder_point} ${selectedIngredient.unit}`
+                    : '-'}
+                </span>
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>안전재고</span>
+                <span className='col-span-3'>
+                  {selectedIngredient.safety_stock !== null
+                    ? `${selectedIngredient.safety_stock} ${selectedIngredient.unit}`
+                    : '-'}
+                </span>
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>단가</span>
+                <span className='col-span-3'>
+                  {selectedIngredient.price
+                    ? formatCurrency(selectedIngredient.price)
+                    : '-'}
+                </span>
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <span className='text-left text-sm font-medium'>상태</span>
+                <span className='col-span-3'>
+                  {(() => {
+                    const status = getStockStatus(
+                      selectedIngredient.current_qty,
+                      selectedIngredient.reorder_point,
+                      selectedIngredient.safety_stock,
+                    );
+                    return (
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${status.className}`}
+                      >
+                        {status.label}
+                      </span>
+                    );
+                  })()}
+                </span>
+              </div>
+              <div className='flex flex-col gap-2 mt-4'>
+                <Button
+                  className='w-full cursor-pointer'
+                  onClick={() => {
+                    onMovement?.('in', selectedIngredient.id);
+                    setSelectedIngredient(null);
+                  }}
+                >
+                  입고
+                </Button>
+                <Button
+                  variant='outline'
+                  className='w-full cursor-pointer'
+                  onClick={() => {
+                    onMovement?.('out', selectedIngredient.id);
+                    setSelectedIngredient(null);
+                  }}
+                >
+                  출고
+                </Button>
+                <Button
+                  variant='outline'
+                  className='w-full cursor-pointer'
+                  onClick={() => {
+                    onMovement?.('waste', selectedIngredient.id);
+                    setSelectedIngredient(null);
+                  }}
+                >
+                  폐기
+                </Button>
+                <Button
+                  variant='outline'
+                  className='w-full cursor-pointer'
+                  onClick={() => setSelectedIngredient(null)}
+                >
+                  취소
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

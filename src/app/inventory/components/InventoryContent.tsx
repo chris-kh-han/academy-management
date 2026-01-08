@@ -8,6 +8,8 @@ import { IngredientsTable, Ingredient } from './IngredientsTable';
 import { MovementsTable } from './MovementsTable';
 import { MovementsSummary } from './MovementsSummary';
 import { MovementFormDialog } from './MovementFormDialog';
+import { AddIngredientDialog } from './AddIngredientDialog';
+import { EditIngredientDialog } from './EditIngredientDialog';
 import type { StockMovement, MovementType } from '@/types';
 
 type InventoryContentProps = {
@@ -29,37 +31,66 @@ export function InventoryContent({
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [dialogType, setDialogType] = React.useState<MovementType>('in');
   const [dialogIngredientId, setDialogIngredientId] = React.useState<
-    number | undefined
+    string | undefined
   >(undefined);
+  const [addIngredientOpen, setAddIngredientOpen] = React.useState(false);
+  const [editIngredientOpen, setEditIngredientOpen] = React.useState(false);
+  const [editIngredient, setEditIngredient] = React.useState<Ingredient | null>(null);
 
   const ingredientOptions = ingredients.map((i) => ({
-    id: Number(i.id),
+    id: i.id,
     name: i.ingredient_name,
     unit: i.unit,
   }));
 
+  // 기존 재료들의 카테고리 추출 (중복 제거, 빈값 제외)
+  const existingCategories = React.useMemo(() => {
+    const categories = ingredients
+      .map((i) => i.category)
+      .filter((c): c is string => !!c && c.trim() !== '');
+    return [...new Set(categories)].sort();
+  }, [ingredients]);
+
   const handleOpenMovementDialog = (
     type: MovementType,
-    ingredientId?: number,
+    ingredientId?: string,
   ) => {
     setDialogType(type);
     setDialogIngredientId(ingredientId);
     setDialogOpen(true);
   };
 
+  const handleEditIngredient = (ingredient: Ingredient) => {
+    setEditIngredient(ingredient);
+    setEditIngredientOpen(true);
+  };
+
   return (
     <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold'>재고 관리</h1>
-          <p className='text-muted-foreground'>
+          <p className='text-muted-foreground mt-1 text-sm'>
             재료 재고 현황을 확인하고 입출고를 관리합니다.
           </p>
         </div>
-        <Button onClick={() => handleOpenMovementDialog('in')}>
-          <Plus className='mr-2 h-4 w-4' />
-          입고
-        </Button>
+        <div className='flex flex-col gap-2 w-full sm:flex-row sm:w-auto'>
+          <Button
+            variant='outline'
+            className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
+            onClick={() => setAddIngredientOpen(true)}
+          >
+            <Plus className='mr-2 h-4 w-4' />
+            재료 추가
+          </Button>
+          <Button
+            className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
+            onClick={() => handleOpenMovementDialog('in')}
+          >
+            <Plus className='mr-2 h-4 w-4' />
+            재고 이동 등록
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue='status' className='space-y-4'>
@@ -73,6 +104,7 @@ export function InventoryContent({
           <IngredientsTable
             data={ingredients}
             onMovement={handleOpenMovementDialog}
+            onEdit={handleEditIngredient}
           />
         </TabsContent>
 
@@ -87,6 +119,19 @@ export function InventoryContent({
         defaultIngredientId={dialogIngredientId}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      <AddIngredientDialog
+        open={addIngredientOpen}
+        onOpenChange={setAddIngredientOpen}
+        existingCategories={existingCategories}
+      />
+
+      <EditIngredientDialog
+        open={editIngredientOpen}
+        onOpenChange={setEditIngredientOpen}
+        ingredient={editIngredient}
+        existingCategories={existingCategories}
       />
     </div>
   );

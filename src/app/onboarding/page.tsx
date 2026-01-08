@@ -77,6 +77,22 @@ export default function OnboardingPage() {
     }
   }, [isInitialized, currentBrand, router]);
 
+  // 뒤로가기 방지 (온보딩 중에는 이탈 불가)
+  useEffect(() => {
+    if (!isInitialized || currentBrand) return;
+
+    // 현재 페이지를 히스토리에 추가
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = () => {
+      // 뒤로가기 시 다시 현재 페이지로
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isInitialized, currentBrand]);
+
   const handleNextSlide = () => {
     if (emblaApi && currentSlide < walkthroughSlides.length - 1) {
       emblaApi.scrollNext();
@@ -267,7 +283,7 @@ export default function OnboardingPage() {
             </div>
             <div className='space-y-4'>
               <div className='space-y-2'>
-                <Label htmlFor='brandName' className='text-white/80'>
+                <Label htmlFor='brandName' className='text-white/80 text-xs'>
                   브랜드 이름
                 </Label>
                 <Input
@@ -311,14 +327,10 @@ export default function OnboardingPage() {
             <p className='text-white/80 mt-1'>입력하신 정보를 확인해주세요</p>
           </div>
           <div className='space-y-4'>
-            <div className='p-4 rounded-lg bg-white/10 space-y-3'>
-              <div className='flex justify-between'>
-                <span className='text-white/70'>브랜드</span>
+            <div className='space-y-2'>
+              <span className='text-white/80 text-xs'>브랜드 이름</span>
+              <div className='p-4 rounded-lg bg-white/10 mt-1'>
                 <span className='text-white font-medium'>{brandName}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='text-white/70'>지점</span>
-                <span className='text-white font-medium'>본점 (자동 생성)</span>
               </div>
             </div>
             <div className='flex gap-2 pt-4'>
