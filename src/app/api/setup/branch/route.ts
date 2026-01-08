@@ -1,4 +1,19 @@
 import { NextResponse } from 'next/server';
+
+/**
+ * B2C 모드에서는 지점 생성 기능 비활성화
+ * B2B 확장 시 아래 주석 해제하여 복원
+ */
+export async function POST() {
+  return NextResponse.json(
+    { error: 'This feature is not available in B2C mode' },
+    { status: 403 }
+  );
+}
+
+/*
+// B2B 모드용 코드 (확장 시 복원)
+import { NextResponse } from 'next/server';
 import { createClient, createServiceRoleClient } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
@@ -85,3 +100,4 @@ export async function POST(request: Request) {
     );
   }
 }
+*/

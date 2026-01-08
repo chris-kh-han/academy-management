@@ -459,6 +459,86 @@ export async function getAllIngredients() {
   return ingredients;
 }
 
+// 재료 추가
+export async function createIngredient(input: {
+  ingredient_name: string;
+  category?: string;
+  unit: string;
+  price?: number;
+  current_qty?: number;
+  reorder_point?: number;
+  safety_stock?: number;
+  branch_id: string;
+}): Promise<{ success: boolean; data?: Ingredient; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 중복 체크: 같은 branch_id 내에서 같은 이름 확인
+  const { data: existing } = await supabase
+    .from('ingredients')
+    .select('id')
+    .eq('branch_id', input.branch_id)
+    .eq('ingredient_name', input.ingredient_name)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: '이미 같은 이름의 재료가 존재합니다.' };
+  }
+
+  // 재료 추가
+  const { data, error } = await supabase
+    .from('ingredients')
+    .insert({
+      ingredient_id: `ING-${Date.now()}`,
+      ingredient_name: input.ingredient_name,
+      category: input.category || null,
+      unit: input.unit,
+      price: input.price || 0,
+      current_qty: input.current_qty || 0,
+      reorder_point: input.reorder_point ?? null,
+      safety_stock: input.safety_stock || 0,
+      branch_id: input.branch_id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createIngredient error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data };
+}
+
+// 재료 수정
+export async function updateIngredient(
+  id: string,
+  input: {
+    ingredient_name?: string;
+    category?: string;
+    unit?: string;
+    price?: number | null;
+    reorder_point?: number | null;
+    safety_stock?: number | null;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('ingredients')
+    .update({
+      ...input,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('updateIngredient error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function getAllRecipes() {
   const supabase = createServiceRoleClient();
   const { data: recipes, error } = await supabase
@@ -744,12 +824,15 @@ export async function getTopMenus(limit: number = 10) {
 }
 
 // 4. 재고 이동 내역
-export async function getStockMovements(startDate?: string, endDate?: string) {
+export async function getStockMovements(
+  startDate?: string,
+  endDate?: string,
+): Promise<StockMovement[]> {
   const supabase = createServiceRoleClient();
 
   let query = supabase
     .from('stock_movements')
-    .select('*, ingredients(ingredient_name)')
+    .select('*, ingredients(ingredient_name, unit)')
     .order('created_at', { ascending: false });
 
   if (startDate) {
@@ -766,7 +849,12 @@ export async function getStockMovements(startDate?: string, endDate?: string) {
     return [];
   }
 
-  return data || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data || []).map((item: any) => ({
+    ...item,
+    ingredient_name: item.ingredients?.ingredient_name,
+    ingredient_unit: item.ingredients?.unit,
+  }));
 }
 
 // 재고 이동 요약 (입고/출고/폐기별 합계)
@@ -1572,26 +1660,23 @@ export async function getUserContext(userId: string): Promise<UserContext> {
   const defaultBrandMember = brandMembers?.find((m) => m.is_default);
   const currentBrand = defaultBrandMember?.brands || brandMembers?.[0]?.brands;
 
-  // 2. 사용자의 지점 멤버십 조회
-  const { data: branchMembers } = await supabase
-    .from('branch_members')
-    .select('*, branches(*)')
-    .eq('user_id', userId);
-
-  // 3. 사용 가능한 지점 목록
-  const availableBranches: Branch[] =
-    branchMembers?.map((m) => m.branches).filter(Boolean) || [];
-
-  // 4. 기본 지점 찾기 (is_default가 true인 것)
-  const defaultBranchMember = branchMembers?.find((m) => m.is_default);
-  const currentBranch = defaultBranchMember?.branches || availableBranches[0];
+  // 2. B2C 모드: 브랜드의 기본 지점 직접 조회 (branch_members 사용 안함)
+  let currentBranch: Branch | undefined;
+  if (currentBrand) {
+    const { data: branches } = await supabase
+      .from('branches')
+      .select('*')
+      .eq('brand_id', currentBrand.id)
+      .limit(1);
+    currentBranch = branches?.[0];
+  }
 
   return {
     userId,
     currentBrand,
     currentBranch,
-    userRole: defaultBranchMember?.role || defaultBrandMember?.role,
-    availableBranches,
+    userRole: defaultBrandMember?.role,
+    availableBranches: currentBranch ? [currentBranch] : [],
   };
 }
 
@@ -1735,6 +1820,19 @@ export async function createMenuCategory(
   input: MenuCategoryInput,
 ): Promise<{ success: boolean; data?: MenuCategory; error?: string }> {
   const supabase = createServiceRoleClient();
+
+  // 중복 체크: 같은 branch_id, category_type, name이 있는지 확인
+  const { data: existing } = await supabase
+    .from('menu_categories')
+    .select('id')
+    .eq('branch_id', input.branch_id)
+    .eq('category_type', input.category_type)
+    .eq('name', input.name)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: '이미 같은 이름의 카테고리가 존재합니다.' };
+  }
 
   const { data, error } = await supabase
     .from('menu_categories')

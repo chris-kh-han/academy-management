@@ -65,11 +65,11 @@ export async function POST(request: Request) {
       console.error('Brand member creation error:', brandMemberError);
     }
 
-    // 본점 자동 생성
+    // 기본 지점 자동 생성 (B2C: 브랜드명 사용, B2B 확장시 변경 가능)
     const { data: branch, error: branchError } = await serviceClient
       .from('branches')
       .insert({
-        name: '본점',
+        name,
         brand_id: brand.id,
       })
       .select()
