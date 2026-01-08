@@ -42,6 +42,7 @@ export default async function ReportsPage() {
   ]);
 
   return (
+    <div className='px-12 py-8 animate-slide-in-left'>
     <ReportsContent
       salesByMenu={salesByMenu}
       inventory={inventory}
@@ -52,5 +53,6 @@ export default async function ReportsPage() {
       movementsSummary={movementsSummary}
       dateRange={{ startDate, endDate }}
     />
+    </div>
   );
 }

@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   const [settings] = await Promise.all([getAllSettings(), minDelay()]);
 
   return (
-    <div className='container mx-auto p-4'>
+    <div className='px-12 py-8 animate-slide-in-left'>
       <div className='mb-6'>
         <h1 className='text-2xl font-bold'>설정</h1>
         <p className='text-muted-foreground'>시스템 설정을 관리합니다.</p>

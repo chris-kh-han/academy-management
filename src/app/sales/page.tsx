@@ -32,7 +32,7 @@ export default async function SalesPage() {
   ]);
 
   return (
-    <div className="p-4 md:p-6">
+    <div className='px-12 py-8 animate-slide-in-left'>
       <SalesContent initialSalesData={salesData} />
     </div>
   );
