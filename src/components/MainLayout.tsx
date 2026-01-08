@@ -59,7 +59,7 @@ export default function MainLayout({
   }
 
   return (
-    <div className='flex flex-col h-screen bg-[#FA891A]'>
+    <div className='flex flex-col h-screen bg-slate-100'>
       <Header />
       {currentBrand ? (
         <SidebarProvider>

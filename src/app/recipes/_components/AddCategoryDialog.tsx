@@ -25,9 +25,30 @@ type AddCategoryDialogProps = {
 
 // 미리 정의된 이모지 목록
 const PREDEFINED_ICONS = [
-  '🍕', '🍝', '🍔', '🥗', '🍰', '🥤', '🍺', '☕',
-  '🍖', '🍗', '🌮', '🌯', '🥪', '🍜', '🍛', '🍱',
-  '🧀', '🥓', '🥩', '🍣', '🍤', '🍦', '🧁', '🍩',
+  '🍕',
+  '🍝',
+  '🍔',
+  '🥗',
+  '🍰',
+  '🥤',
+  '🍺',
+  '☕',
+  '🍖',
+  '🍗',
+  '🌮',
+  '🌯',
+  '🥪',
+  '🍜',
+  '🍛',
+  '🍱',
+  '🧀',
+  '🥓',
+  '🥩',
+  '🍣',
+  '🍤',
+  '🍦',
+  '🧁',
+  '🍩',
 ];
 
 export function AddCategoryDialog({
@@ -95,19 +116,19 @@ export function AddCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className='max-w-md'>
         <DialogHeader>
           <DialogTitle>
             {categoryType === 'menu' ? '메뉴 카테고리' : '옵션 카테고리'} 추가
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className='space-y-4 py-4'>
           {/* 카테고리 이름 */}
-          <div className="space-y-2">
-            <Label htmlFor="categoryName">카테고리 이름 *</Label>
+          <div className='space-y-2'>
+            <Label htmlFor='categoryName'>카테고리 이름 *</Label>
             <Input
-              id="categoryName"
+              id='categoryName'
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={
@@ -119,20 +140,22 @@ export function AddCategoryDialog({
           </div>
 
           {/* 아이콘 선택 */}
-          <div className="space-y-2">
+          <div className='space-y-2'>
             <Label>아이콘 선택 *</Label>
-            <div className="grid grid-cols-8 gap-2 p-2 border rounded-md bg-white dark:bg-gray-950">
+            <div className='grid grid-cols-8 gap-2 p-2 border rounded-md bg-white dark:bg-gray-950'>
               {PREDEFINED_ICONS.map((emoji) => (
                 <button
                   key={emoji}
-                  type="button"
+                  type='button'
                   onClick={() => {
                     setIcon(emoji);
                     setCustomIcon('');
                   }}
                   className={cn(
                     'text-2xl p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
-                    icon === emoji && !customIcon && 'bg-orange-100 dark:bg-orange-900 ring-2 ring-orange-500',
+                    icon === emoji &&
+                      !customIcon &&
+                      'bg-orange-100 dark:bg-orange-900 ring-2 ring-orange-500',
                   )}
                 >
                   {emoji}
@@ -142,18 +165,18 @@ export function AddCategoryDialog({
           </div>
 
           {/* 커스텀 아이콘 입력 */}
-          <div className="space-y-2">
-            <Label htmlFor="customIcon">또는 직접 입력</Label>
+          <div className='space-y-2'>
+            <Label htmlFor='customIcon'>또는 직접 입력</Label>
             <Input
-              id="customIcon"
+              id='customIcon'
               value={customIcon}
               onChange={(e) => setCustomIcon(e.target.value)}
-              placeholder="이모지를 직접 입력하세요"
+              placeholder='이모지를 직접 입력하세요'
               maxLength={2}
             />
             {customIcon && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                선택된 아이콘: <span className="text-2xl">{customIcon}</span>
+              <p className='text-sm text-gray-500 dark:text-gray-400'>
+                선택된 아이콘: <span className='text-2xl'>{customIcon}</span>
               </p>
             )}
           </div>
@@ -161,7 +184,7 @@ export function AddCategoryDialog({
 
         <DialogFooter>
           <Button
-            variant="outline"
+            variant='outline'
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
@@ -170,7 +193,7 @@ export function AddCategoryDialog({
           <Button onClick={handleSave} disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                 저장 중...
               </>
             ) : (

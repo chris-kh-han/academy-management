@@ -46,10 +46,25 @@ export default function SplashScreen() {
       style={{ paddingBottom: '35%' }}
     >
       {/* 로고 텍스트 */}
-      <h1 className='flex items-center text-white mb-12 font-(family-name:--font-do-hyeon)'>
-        <span className='text-[10rem] leading-none'>푸</span>
-        <span className='text-[6rem] leading-none mx-8'>&</span>
-        <span className='text-[12rem] leading-none'>B</span>
+      <h1 className='flex items-center mb-12 font-(family-name:--font-do-hyeon)' aria-label='푸&B'>
+        {['푸', '&', 'B'].map((char, index) => {
+          const charProgress = (progress / 100) * 4;
+          const fillAmount = Math.min(100, Math.max(0, (charProgress - index) * 100));
+          const sizes = ['text-[10rem]', 'text-[6rem] mx-8', 'text-[12rem]'];
+
+          return (
+            <span
+              key={index}
+              aria-hidden='true'
+              className={`${sizes[index]} leading-none inline-block bg-clip-text text-transparent`}
+              style={{
+                backgroundImage: `linear-gradient(to right, white ${fillAmount}%, rgba(255,255,255,0.3) ${fillAmount}%)`,
+              }}
+            >
+              {char}
+            </span>
+          );
+        })}
       </h1>
 
       {/* 프로그레스 바 컨테이너 */}

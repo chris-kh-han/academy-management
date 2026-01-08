@@ -43,7 +43,7 @@ export default async function Home() {
       <div className='flex-1 bg-[#FA891A]'>
         {/* Hero Section */}
         <header className='container mx-auto px-6 py-16 text-center'>
-          <h1 className='text-white mb-8 font-(family-name:--font-do-hyeon)'>
+          <h1 className='text-white mb-8 font-bold'>
             <span className='text-[8rem] leading-none'>푸</span>
             <span className='text-[4rem] leading-none mx-8'>&</span>
             <span className='text-[9rem] leading-none'>B</span>

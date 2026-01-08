@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className='flex-1 p-8 space-y-8 bg-slate-200'>
+    <div className='px-12 py-8 animate-slide-in-left space-y-8'>
       {/* 1. 핵심 지표 카드 - Priority 1 */}
       <Suspense fallback={<KPISkeleton />}>
         <SalesKPICards />
