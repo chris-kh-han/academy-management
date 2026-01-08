@@ -469,7 +469,7 @@ export async function createIngredient(input: {
   reorder_point?: number;
   safety_stock?: number;
   branch_id: string;
-}): Promise<{ success: boolean; data?: Ingredient; error?: string }> {
+}): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
   const supabase = createServiceRoleClient();
 
   // 중복 체크: 같은 branch_id 내에서 같은 이름 확인
@@ -873,11 +873,9 @@ export async function getStockMovementsSummary(
 
   movements.forEach((m) => {
     switch (m.movement_type) {
-      case 'incoming':
       case 'in':
         summary.incoming += m.quantity || 0;
         break;
-      case 'outgoing':
       case 'out':
         summary.outgoing += m.quantity || 0;
         break;
