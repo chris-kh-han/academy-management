@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { createCategory } from '../_actions/categoryActions';
 import { useBranch } from '@/contexts/BranchContext';
 import { cn } from '@/lib/utils';
@@ -77,12 +78,12 @@ export function AddCategoryDialog({
     const finalIcon = customIcon.trim() || icon;
 
     if (!trimmedName) {
-      alert('카테고리 이름을 입력해주세요.');
+      toast.error('카테고리 이름을 입력해주세요.');
       return;
     }
 
     if (!currentBranch?.id) {
-      alert('지점 정보가 없습니다.');
+      toast.error('지점 정보가 없습니다.');
       return;
     }
 
@@ -102,13 +103,14 @@ export function AddCategoryDialog({
       });
 
       if (result.success) {
+        toast.success('카테고리가 추가되었습니다.');
         onOpenChange(false);
       } else {
-        alert('저장 실패: ' + result.error);
+        toast.error(result.error || '저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }

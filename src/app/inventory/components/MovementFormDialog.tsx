@@ -27,7 +27,7 @@ import type { MovementType, StockMovementInput } from '@/types';
 import { createMovementAction } from '../actions';
 
 type IngredientOption = {
-  id: number;
+  id: string;
   name: string;
   unit: string;
 };
@@ -35,7 +35,7 @@ type IngredientOption = {
 type MovementFormDialogProps = {
   ingredients: IngredientOption[];
   defaultType?: MovementType;
-  defaultIngredientId?: number;
+  defaultIngredientId?: string;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -59,7 +59,7 @@ export function MovementFormDialog({
   const setOpen = isControlled ? onOpenChange! : setInternalOpen;
 
   const [formData, setFormData] = React.useState<{
-    ingredient_id: number | null;
+    ingredient_id: string | null;
     movement_type: MovementType;
     quantity: string;
     unit_price: string;
@@ -150,17 +150,19 @@ export function MovementFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
-      ) : (
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className='mr-2 h-4 w-4' />
-            재고 이동 등록
-          </Button>
-        </DialogTrigger>
+      {controlledOpen === undefined && (
+        trigger ? (
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+        ) : (
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className='mr-2 h-4 w-4' />
+              재고 이동 등록
+            </Button>
+          </DialogTrigger>
+        )
       )}
-      <DialogContent className='sm:max-w-[500px]'>
+      <DialogContent className='sm:max-w-[500px] sm:top-[10%] sm:translate-y-0'>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>재고 이동 등록</DialogTitle>
@@ -203,9 +205,9 @@ export function MovementFormDialog({
                 재료 *
               </Label>
               <Select
-                value={formData.ingredient_id?.toString() || ''}
+                value={formData.ingredient_id || ''}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, ingredient_id: Number(value) })
+                  setFormData({ ...formData, ingredient_id: value })
                 }
               >
                 <SelectTrigger className='col-span-3'>
@@ -308,8 +310,8 @@ export function MovementFormDialog({
                   formData.movement_type === 'out'
                     ? '판매, 조리 등'
                     : formData.movement_type === 'waste'
-                      ? '유통기한 만료, 파손 등'
-                      : '사유 입력'
+                    ? '유통기한 만료, 파손 등'
+                    : '사유 입력'
                 }
                 value={formData.reason}
                 onChange={(e) =>

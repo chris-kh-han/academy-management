@@ -4,7 +4,10 @@ import {
   createStockMovement,
   updateStockMovement,
   deleteStockMovement,
+  createIngredient,
+  updateIngredient,
 } from '@/utils/supabase/supabase';
+import { revalidatePath } from 'next/cache';
 import type { StockMovementInput } from '@/types';
 
 export async function createMovementAction(input: StockMovementInput) {
@@ -22,5 +25,46 @@ export async function updateMovementAction(
 
 export async function deleteMovementAction(id: number) {
   const result = await deleteStockMovement(id);
+  return result;
+}
+
+// 재료 추가 액션
+export async function createIngredientAction(input: {
+  ingredient_name: string;
+  category?: string;
+  unit: string;
+  price?: number;
+  current_qty?: number;
+  reorder_point?: number;
+  safety_stock?: number;
+  branch_id: string;
+}) {
+  const result = await createIngredient(input);
+
+  if (result.success) {
+    revalidatePath('/inventory');
+  }
+
+  return result;
+}
+
+// 재료 수정 액션
+export async function updateIngredientAction(
+  id: string,
+  input: {
+    ingredient_name?: string;
+    category?: string;
+    unit?: string;
+    price?: number | null;
+    reorder_point?: number | null;
+    safety_stock?: number | null;
+  },
+) {
+  const result = await updateIngredient(id, input);
+
+  if (result.success) {
+    revalidatePath('/inventory');
+  }
+
   return result;
 }

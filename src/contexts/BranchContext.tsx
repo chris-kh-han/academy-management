@@ -16,12 +16,16 @@ import type { User } from '@supabase/supabase-js';
 // 온보딩 리다이렉트에서 제외할 경로
 const EXCLUDED_PATHS = ['/onboarding', '/sign-in', '/sign-up', '/setup', '/'];
 
+/**
+ * B2C 모드: 브랜드 중심 Context
+ * - currentBranch는 내부 데이터 저장용으로 유지 (UI에서 숨김)
+ * - switchBranch, availableBranches는 B2B 확장 시 복원
+ */
 type BranchContextType = {
   // 현재 상태
   currentBrand: Brand | null;
-  currentBranch: Branch | null;
+  currentBranch: Branch | null; // 내부용 (데이터 저장 시 필요)
   userRole: BrandRole | BranchRole | null;
-  availableBranches: Branch[];
   user: User | null;
 
   // 로딩 상태
@@ -29,7 +33,6 @@ type BranchContextType = {
   isInitialized: boolean;
 
   // 액션
-  switchBranch: (branchId: string) => Promise<void>;
   refreshContext: () => Promise<void>;
 };
 
@@ -45,7 +48,6 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [userRole, setUserRole] = useState<BrandRole | BranchRole | null>(null);
-  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -84,42 +86,16 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         setCurrentBrand(data.currentBrand);
-        setCurrentBranch(data.currentBranch);
+        setCurrentBranch(data.currentBranch); // 내부용 유지
         setUserRole(data.userRole);
-        setAvailableBranches(data.availableBranches);
       }
     } catch (error) {
-      console.error('Failed to load branch context:', error);
+      console.error('Failed to load context:', error);
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
     }
   }, [user?.id]);
-
-  // 지점 전환
-  const switchBranch = useCallback(
-    async (branchId: string) => {
-      if (!user?.id) return;
-
-      setIsLoading(true);
-      try {
-        const response = await fetch('/api/user/switch-branch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ branchId }),
-        });
-
-        if (response.ok) {
-          await loadContext();
-        }
-      } catch (error) {
-        console.error('Failed to switch branch:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [user?.id, loadContext]
-  );
 
   // 컨텍스트 새로고침
   const refreshContext = useCallback(async () => {
@@ -159,11 +135,9 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         currentBrand,
         currentBranch,
         userRole,
-        availableBranches,
         user,
         isLoading,
         isInitialized,
-        switchBranch,
         refreshContext,
       }}
     >
@@ -180,7 +154,7 @@ export function useBranch() {
   return context;
 }
 
-// 현재 지점 ID만 필요할 때 사용
+// 현재 지점 ID만 필요할 때 사용 (데이터 저장용)
 export function useCurrentBranchId(): string | null {
   const { currentBranch } = useBranch();
   return currentBranch?.id || null;
