@@ -192,16 +192,8 @@ function SortableCategory({
             variant='ghost'
             size='icon'
             onClick={() => onDeleteCategory(category.id)}
-            disabled={categoryMenus.length > 0}
           >
-            <Trash2
-              className={cn(
-                'h-4 w-4',
-                categoryMenus.length > 0
-                  ? 'text-gray-300 dark:text-gray-700'
-                  : 'text-red-500 dark:text-red-400',
-              )}
-            />
+            <Trash2 className='h-4 w-4 text-red-500 dark:text-red-400' />
           </Button>
 
           <button
@@ -390,16 +382,8 @@ function SortableOptionCategory({
             variant='ghost'
             size='icon'
             onClick={() => onDeleteCategory(category.id)}
-            disabled={categoryOptions.length > 0}
           >
-            <Trash2
-              className={cn(
-                'h-4 w-4',
-                categoryOptions.length > 0
-                  ? 'text-gray-300 dark:text-gray-700'
-                  : 'text-red-500 dark:text-red-400',
-              )}
-            />
+            <Trash2 className='h-4 w-4 text-red-500 dark:text-red-400' />
           </Button>
         </div>
       </div>
@@ -647,22 +631,21 @@ export function MenuBoard({
 
   // 카테고리 삭제 핸들러
   const handleDeleteCategory = async (categoryId: string) => {
-    if (
-      !confirm(
-        '이 카테고리를 삭제하시겠습니까? (메뉴가 있으면 삭제할 수 없습니다)',
-      )
-    ) {
+    const categoryMenus = menusByCategory[categoryId] || [];
+    const menuCount = categoryMenus.length;
+
+    const message = menuCount > 0
+      ? `이 카테고리와 포함된 ${menuCount}개의 메뉴를 모두 삭제하시겠습니까?\n\n삭제된 메뉴는 복구할 수 없습니다.`
+      : '이 카테고리를 삭제하시겠습니까?';
+
+    if (!confirm(message)) {
       return;
     }
 
     const result = await deleteCategory(categoryId);
 
     if (!result.success) {
-      if (result.hasMenus) {
-        alert('카테고리에 메뉴가 있어서 삭제할 수 없습니다.');
-      } else {
-        alert('삭제 실패: ' + result.error);
-      }
+      alert('삭제 실패: ' + result.error);
     }
   };
 

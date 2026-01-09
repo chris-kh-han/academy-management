@@ -1873,28 +1873,46 @@ export async function updateMenuCategory(
   return { success: true };
 }
 
-// 카테고리 삭제 (실제로는 is_active를 false로 설정)
+// 카테고리 삭제 (cascade: 메뉴와 레시피도 함께 삭제)
 export async function deleteMenuCategory(
   id: string,
-): Promise<{ success: boolean; error?: string; hasMenus?: boolean }> {
+): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceRoleClient();
 
-  // 1. 해당 카테고리에 메뉴가 있는지 확인
+  // 1. 해당 카테고리의 메뉴 ID들 조회
   const { data: menus } = await supabase
     .from('menus')
     .select('menu_id')
-    .eq('category_id', id)
-    .limit(1);
+    .eq('category_id', id);
 
+  // 2. 메뉴가 있으면 레시피와 메뉴 삭제
   if (menus && menus.length > 0) {
-    return {
-      success: false,
-      hasMenus: true,
-      error: '카테고리에 메뉴가 있어서 삭제할 수 없습니다.',
-    };
+    const menuIds = menus.map((m) => m.menu_id);
+
+    // 레시피 먼저 삭제
+    const { error: recipeError } = await supabase
+      .from('menu_recipes')
+      .delete()
+      .in('menu_id', menuIds);
+
+    if (recipeError) {
+      console.error('deleteMenuCategory recipe error:', recipeError);
+      return { success: false, error: recipeError.message };
+    }
+
+    // 메뉴 삭제
+    const { error: menuError } = await supabase
+      .from('menus')
+      .delete()
+      .in('menu_id', menuIds);
+
+    if (menuError) {
+      console.error('deleteMenuCategory menu error:', menuError);
+      return { success: false, error: menuError.message };
+    }
   }
 
-  // 2. 소프트 삭제 (is_active = false)
+  // 3. 카테고리 소프트 삭제 (is_active = false)
   const { error } = await supabase
     .from('menu_categories')
     .update({

@@ -9,10 +9,22 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { updateRecipeIngredients, updateMenuMetadata } from '../_actions/updateRecipe';
+import { deleteMenu } from '../_actions/createMenu';
 import { ImageUpload } from '@/components/ImageUpload';
 
 type Ingredient = {
@@ -61,6 +73,8 @@ export function EditRecipeDialog({
   >([]);
   const [menuImageUrl, setMenuImageUrl] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -172,7 +186,24 @@ export function EditRecipeDialog({
     }
   };
 
-  console.log(editedIngredients);
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteMenu(menuId);
+      if (result.success) {
+        setShowDeleteConfirm(false);
+        onOpenChange(false);
+        toast.success('메뉴가 삭제되었습니다.');
+      } else {
+        toast.error('삭제 실패: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -237,15 +268,49 @@ export function EditRecipeDialog({
             재료 추가
           </Button>
         </div>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            취소
+        <DialogFooter className='flex justify-between sm:justify-between'>
+          <Button
+            variant='destructive'
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting || isLoading}
+          >
+            <Trash2 className='h-4 w-4 mr-2' />
+            메뉴 삭제
           </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? '저장 중...' : '저장'}
-          </Button>
+          <div className='flex gap-2'>
+            <Button variant='outline' onClick={() => onOpenChange(false)}>
+              취소
+            </Button>
+            <Button onClick={handleSave} disabled={isLoading || isDeleting}>
+              {isLoading ? '저장 중...' : '저장'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* 삭제 확인 모달 */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>메뉴 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{menuName}&quot; 메뉴를 삭제하시겠습니까?
+              <br />
+              레시피도 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

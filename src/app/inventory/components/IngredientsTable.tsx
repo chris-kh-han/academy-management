@@ -62,6 +62,7 @@ function getStockStatus(
   reorderPoint: number | null,
   safetyStock: number | null,
 ): { label: string; className: string } {
+  const reorder = reorderPoint ?? 0;
   const safety = safetyStock ?? 0;
 
   // 품절
@@ -69,16 +70,17 @@ function getStockStatus(
     return { label: '품절', className: 'bg-red-100 text-red-700' };
   }
 
-  // 안전재고 이하 → 위험
-  if (currentQty <= safety) {
+  // 현재재고 < 재주문점 → 위험
+  if (currentQty < reorder) {
     return { label: '위험', className: 'bg-red-100 text-red-700' };
   }
 
-  // 재주문점이 설정된 경우에만 부족 판단
-  if (reorderPoint !== null && currentQty <= reorderPoint) {
-    return { label: '부족', className: 'bg-orange-100 text-orange-700' };
+  // 재주문점 <= 현재재고 < 안전재고 → 주의
+  if (currentQty < safety) {
+    return { label: '주의', className: 'bg-orange-100 text-orange-700' };
   }
 
+  // 현재재고 >= 안전재고 → 정상
   return { label: '정상', className: 'bg-green-100 text-green-700' };
 }
 
@@ -97,7 +99,11 @@ type IngredientsTableProps = {
   onEdit?: (ingredient: Ingredient) => void;
 };
 
-export function IngredientsTable({ data, onMovement, onEdit }: IngredientsTableProps) {
+export function IngredientsTable({
+  data,
+  onMovement,
+  onEdit,
+}: IngredientsTableProps) {
   const isMobile = useIsMobile();
   const [selectedIngredient, setSelectedIngredient] =
     React.useState<Ingredient | null>(null);
@@ -247,9 +253,7 @@ export function IngredientsTable({ data, onMovement, onEdit }: IngredientsTableP
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 <DropdownMenuLabel>작업</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => onEdit?.(ingredient)}
-                >
+                <DropdownMenuItem onClick={() => onEdit?.(ingredient)}>
                   수정
                 </DropdownMenuItem>
                 <DropdownMenuItem
