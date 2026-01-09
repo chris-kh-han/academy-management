@@ -622,14 +622,12 @@ export function MenuBoard({
 
   const handleMenuClick = (menu: Menu) => {
     const recipe = recipes[menu.menu_id];
-    if (recipe) {
-      setEditingRecipe({
-        menuId: menu.menu_id,
-        menuName: menu.menu_name,
-        ingredients: recipe.ingredients,
-        imageUrl: menu.image_url,
-      });
-    }
+    setEditingRecipe({
+      menuId: menu.menu_id,
+      menuName: menu.menu_name,
+      ingredients: recipe?.ingredients || [],
+      imageUrl: menu.image_url,
+    });
   };
 
   // 가격 포맷 (한국 원화)
