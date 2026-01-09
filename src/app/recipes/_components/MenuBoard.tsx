@@ -255,7 +255,8 @@ function SortableCategory({
                         <Image
                           src={menu.image_url}
                           alt={menu.menu_name}
-                          className='w-full h-full object-cover'
+                          fill
+                          className='object-cover'
                         />
                       ) : (
                         <div className='text-3xl font-bold text-orange-600 dark:text-orange-300'>
@@ -423,12 +424,13 @@ function SortableOptionCategory({
               <CardContent className='p-4'>
                 <div className='flex flex-col items-center text-center space-y-3'>
                   {/* 원형 이미지 */}
-                  <div className='relative w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center overflow-hidden border-2 border-gray-100 dark:border-gray-800'>
+                  <div className='relative w-20 h-20 rounded-full bg-linear-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center overflow-hidden border-2 border-gray-100 dark:border-gray-800'>
                     {option.image_url ? (
                       <Image
                         src={option.image_url}
                         alt={option.option_name}
-                        className='w-full h-full object-cover'
+                        fill
+                        className='object-cover'
                       />
                     ) : (
                       <div className='text-2xl font-bold text-blue-600 dark:text-blue-300'>
