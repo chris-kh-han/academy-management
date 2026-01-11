@@ -317,6 +317,8 @@ export type StockMovement = {
   quantity: number;
   unit_price?: number;
   total_price?: number;
+  previous_qty?: number;
+  resulting_qty?: number;
   reason?: string;
   reference_no?: string;
   supplier?: string;

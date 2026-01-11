@@ -463,6 +463,7 @@ export async function getAllIngredients() {
 export async function createIngredient(input: {
   ingredient_name: string;
   category?: string;
+  specification?: string;
   unit: string;
   price?: number;
   current_qty?: number;
@@ -491,6 +492,7 @@ export async function createIngredient(input: {
       ingredient_id: `ING-${Date.now()}`,
       ingredient_name: input.ingredient_name,
       category: input.category || null,
+      specification: input.specification || null,
       unit: input.unit,
       price: input.price || 0,
       current_qty: input.current_qty || 0,
@@ -515,6 +517,7 @@ export async function updateIngredient(
   input: {
     ingredient_name?: string;
     category?: string;
+    specification?: string | null;
     unit?: string;
     price?: number | null;
     reorder_point?: number | null;
@@ -874,16 +877,16 @@ export async function getStockMovementsSummary(
   movements.forEach((m) => {
     switch (m.movement_type) {
       case 'in':
-        summary.incoming += m.quantity || 0;
+        summary.incoming += 1;
         break;
       case 'out':
-        summary.outgoing += m.quantity || 0;
+        summary.outgoing += 1;
         break;
       case 'waste':
-        summary.waste += m.quantity || 0;
+        summary.waste += 1;
         break;
       case 'adjustment':
-        summary.adjustment += m.quantity || 0;
+        summary.adjustment += 1;
         break;
     }
   });
@@ -953,6 +956,8 @@ export async function getStockMovementsPaginated(options?: {
     quantity: item.quantity,
     unit_price: item.unit_price,
     total_price: item.total_price,
+    previous_qty: item.previous_qty,
+    resulting_qty: item.resulting_qty,
     reason: item.reason,
     reference_no: item.reference_no,
     supplier: item.supplier,
@@ -976,9 +981,28 @@ export async function createStockMovement(
 ): Promise<{ success: boolean; data?: StockMovement; error?: string }> {
   const supabase = createServiceRoleClient();
 
+  // 현재 재고 수량 조회
+  const { data: ingredient } = await supabase
+    .from('ingredients')
+    .select('current_qty')
+    .eq('id', input.ingredient_id)
+    .single();
+
+  const previousQty = ingredient?.current_qty || 0;
+
+  // 재고 변화량 계산
+  const quantityChange =
+    input.movement_type === 'in'
+      ? input.quantity
+      : input.movement_type === 'adjustment'
+        ? input.quantity // 조정은 입력값 그대로 (양수면 증가, 음수면 감소)
+        : -input.quantity; // out, waste는 감소
+
+  const resultingQty = previousQty + quantityChange;
+
   // 총 금액 계산
   const totalPrice = input.unit_price
-    ? input.quantity * input.unit_price
+    ? Math.abs(input.quantity) * input.unit_price
     : undefined;
 
   const { data, error } = await supabase
@@ -989,6 +1013,8 @@ export async function createStockMovement(
       quantity: input.quantity,
       unit_price: input.unit_price,
       total_price: totalPrice,
+      previous_qty: previousQty,
+      resulting_qty: resultingQty,
       reason: input.reason,
       reference_no: input.reference_no,
       supplier: input.supplier,
@@ -1003,13 +1029,6 @@ export async function createStockMovement(
   }
 
   // 재고 수량 업데이트
-  const quantityChange =
-    input.movement_type === 'in'
-      ? input.quantity
-      : input.movement_type === 'adjustment'
-        ? input.quantity // 조정은 입력값 그대로 (양수면 증가, 음수면 감소)
-        : -input.quantity; // out, waste는 감소
-
   const { error: updateError } = await supabase.rpc('update_ingredient_stock', {
     p_ingredient_id: input.ingredient_id,
     p_quantity_change: quantityChange,
@@ -1018,21 +1037,13 @@ export async function createStockMovement(
   // RPC가 없으면 직접 업데이트
   if (updateError) {
     console.log('RPC not available, updating directly');
-    const { data: ingredient } = await supabase
+    await supabase
       .from('ingredients')
-      .select('current_qty')
-      .eq('id', input.ingredient_id)
-      .single();
-
-    if (ingredient) {
-      await supabase
-        .from('ingredients')
-        .update({
-          current_qty: (ingredient.current_qty || 0) + quantityChange,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', input.ingredient_id);
-    }
+      .update({
+        current_qty: resultingQty,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', input.ingredient_id);
   }
 
   return { success: true, data };

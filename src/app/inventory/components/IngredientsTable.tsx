@@ -28,7 +28,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -49,6 +48,7 @@ export type Ingredient = {
   ingredient_id: string;
   ingredient_name: string;
   category: string;
+  specification: string | null;
   unit: string;
   price: number;
   current_qty: number;
@@ -61,27 +61,43 @@ function getStockStatus(
   currentQty: number,
   reorderPoint: number | null,
   safetyStock: number | null,
-): { label: string; className: string } {
+): { label: string; className: string; rowClassName: string } {
   const reorder = reorderPoint ?? 0;
   const safety = safetyStock ?? 0;
 
   // 품절
   if (currentQty <= 0) {
-    return { label: '품절', className: 'bg-red-100 text-red-700' };
+    return {
+      label: '품절',
+      className: 'bg-red-100 text-red-700',
+      rowClassName: 'bg-red-50 hover:bg-red-100',
+    };
   }
 
   // 현재재고 < 재주문점 → 위험
   if (currentQty < reorder) {
-    return { label: '위험', className: 'bg-red-100 text-red-700' };
+    return {
+      label: '위험',
+      className: 'bg-red-100 text-red-700',
+      rowClassName: 'bg-red-50 hover:bg-red-100',
+    };
   }
 
   // 재주문점 <= 현재재고 < 안전재고 → 주의
   if (currentQty < safety) {
-    return { label: '주의', className: 'bg-orange-100 text-orange-700' };
+    return {
+      label: '주의',
+      className: 'bg-orange-100 text-orange-700',
+      rowClassName: 'bg-orange-50 hover:bg-orange-100',
+    };
   }
 
   // 현재재고 >= 안전재고 → 정상
-  return { label: '정상', className: 'bg-green-100 text-green-700' };
+  return {
+    label: '정상',
+    className: 'bg-green-100 text-green-700',
+    rowClassName: 'bg-green-50 hover:bg-green-100',
+  };
 }
 
 // 숫자 포맷 (원화)
@@ -135,81 +151,8 @@ export function IngredientsTable({
         enableHiding: false,
       },
       {
-        accessorKey: 'ingredient_name',
-        header: ({ column }) => (
-          <Button
-            variant='ghost'
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          >
-            재료명
-            <ArrowUpDown className='ml-2 h-4 w-4' />
-          </Button>
-        ),
-        cell: ({ row }) => (
-          <div className='font-medium'>{row.getValue('ingredient_name')}</div>
-        ),
-      },
-      {
-        accessorKey: 'category',
-        header: '카테고리',
-        cell: ({ row }) => (
-          <div className='capitalize'>{row.getValue('category') || '-'}</div>
-        ),
-      },
-      {
-        accessorKey: 'current_qty',
-        header: ({ column }) => (
-          <div className='text-center'>
-            <Button
-              variant='ghost'
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === 'asc')
-              }
-            >
-              현재 재고
-              <ArrowUpDown className='ml-2 h-4 w-4' />
-            </Button>
-          </div>
-        ),
-        cell: ({ row }) => {
-          const qty = row.getValue('current_qty') as number;
-          const unit = row.original.unit || '';
-          return (
-            <div className='text-center'>
-              {qty} {unit}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'reorder_point',
-        header: '재주문점',
-        cell: ({ row }) => {
-          const reorderPoint = row.getValue('reorder_point') as number | null;
-          const unit = row.original.unit || '';
-          return (
-            <div className='text-center'>
-              {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'safety_stock',
-        header: '안전재고',
-        cell: ({ row }) => {
-          const safetyStock = row.getValue('safety_stock') as number | null;
-          const unit = row.original.unit || '';
-          return (
-            <div className='text-center'>
-              {safetyStock !== null ? `${safetyStock} ${unit}` : '-'}
-            </div>
-          );
-        },
-      },
-      {
         id: 'status',
-        header: '상태',
+        header: '',
         cell: ({ row }) => {
           const status = getStockStatus(
             row.original.current_qty,
@@ -218,7 +161,7 @@ export function IngredientsTable({
           );
           return (
             <span
-              className={`px-2 py-1 rounded text-xs font-medium ${status.className}`}
+              className={`px-2 py-0.5 rounded text-xs font-medium ${status.className}`}
             >
               {status.label}
             </span>
@@ -226,12 +169,124 @@ export function IngredientsTable({
         },
       },
       {
+        accessorKey: 'ingredient_name',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            재료명
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div className='font-medium'>{row.getValue('ingredient_name')}</div>
+        ),
+      },
+      {
+        accessorKey: 'category',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            카테고리
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div className='capitalize'>{row.getValue('category') || '-'}</div>
+        ),
+      },
+      {
+        accessorKey: 'specification',
+        header: '규격',
+        cell: ({ row }) => (
+          <div className='text-sm text-muted-foreground'>
+            {row.getValue('specification') || '-'}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'current_qty',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            현재 재고
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const qty = row.getValue('current_qty') as number;
+          const unit = row.original.unit || '';
+          return (
+            <div>
+              {qty} {unit}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'reorder_point',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            재주문점
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const reorderPoint = row.getValue('reorder_point') as number | null;
+          const unit = row.original.unit || '';
+          return (
+            <div>{reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}</div>
+          );
+        },
+      },
+      {
+        accessorKey: 'safety_stock',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            안전재고
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const safetyStock = row.getValue('safety_stock') as number | null;
+          const unit = row.original.unit || '';
+          return (
+            <div>{safetyStock !== null ? `${safetyStock} ${unit}` : '-'}</div>
+          );
+        },
+      },
+      {
         accessorKey: 'price',
-        header: '단가',
+        header: ({ column }) => (
+          <Button
+            variant='ghost'
+            className='-ml-3'
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            단가
+            <ArrowUpDown className='h-4 w-4' />
+          </Button>
+        ),
         cell: ({ row }) => {
           const price = row.getValue('price') as number;
           return (
-            <div className='text-center font-medium'>
+            <div className='font-medium'>
               {price ? formatCurrency(price) : '-'}
             </div>
           );
@@ -239,6 +294,7 @@ export function IngredientsTable({
       },
       {
         id: 'actions',
+        header: '설정',
         enableHiding: false,
         cell: ({ row }) => {
           const ingredient = row.original;
@@ -252,32 +308,36 @@ export function IngredientsTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
-                <DropdownMenuLabel>작업</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => onEdit?.(ingredient)}>
-                  수정
-                </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() =>
-                    navigator.clipboard.writeText(ingredient.ingredient_id)
-                  }
+                  onClick={() => onEdit?.(ingredient)}
+                  className='cursor-pointer'
                 >
-                  ID 복사
+                  수정
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onMovement?.('in', ingredient.id)}
+                  className='cursor-pointer'
                 >
                   입고 등록
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onMovement?.('out', ingredient.id)}
+                  className='cursor-pointer'
                 >
                   출고 등록
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onMovement?.('waste', ingredient.id)}
+                  className='cursor-pointer'
                 >
                   폐기 등록
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onMovement?.('adjustment', ingredient.id)}
+                  className='cursor-pointer'
+                >
+                  조정 등록
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -301,6 +361,7 @@ export function IngredientsTable({
       setColumnVisibility({
         select: false,
         category: false,
+        specification: false,
         reorder_point: false,
         safety_stock: false,
         price: false,
@@ -332,7 +393,7 @@ export function IngredientsTable({
 
   return (
     <div className='w-full'>
-      <div className='flex items-center gap-2 py-4'>
+      <div className='flex flex-col gap-2 py-4 md:flex-row md:items-center'>
         <Input
           placeholder='재료명 검색...'
           value={
@@ -344,41 +405,60 @@ export function IngredientsTable({
               .getColumn('ingredient_name')
               ?.setFilterValue(event.target.value)
           }
-          className='max-w-sm placeholder:text-gray-400'
+          className='w-full md:max-w-sm placeholder:text-gray-400'
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='outline' className='ml-auto'>
-              컬럼 <ChevronDown />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                const columnNames: Record<string, string> = {
-                  ingredient_name: '재료명',
-                  category: '카테고리',
-                  current_qty: '현재 재고',
-                  reorder_point: '재주문점',
-                  status: '상태',
-                  price: '단가',
-                };
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {columnNames[column.id] || column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className='flex items-center justify-between md:gap-2 md:ml-auto'>
+          <div className='flex items-center gap-1'>
+            <span className='text-xs text-muted-foreground mr-1'>표시:</span>
+            {[10, 25, 50].map((size) => (
+              <button
+                key={size}
+                onClick={() => table.setPageSize(size)}
+                className={`text-xs px-2 py-1 rounded ${
+                  table.getState().pagination.pageSize === size
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {size}개
+              </button>
+            ))}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline'>
+                컬럼 <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  const columnNames: Record<string, string> = {
+                    ingredient_name: '재료명',
+                    category: '카테고리',
+                    specification: '규격',
+                    current_qty: '현재 재고',
+                    reorder_point: '재주문점',
+                    safety_stock: '안전재고',
+                    price: '단가',
+                  };
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {columnNames[column.id] || column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <div className='overflow-hidden rounded-md border bg-white'>
         <Table>
@@ -402,25 +482,34 @@ export function IngredientsTable({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  onClick={() =>
-                    isMobile && setSelectedIngredient(row.original)
-                  }
-                  className={isMobile ? 'cursor-pointer' : ''}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const status = getStockStatus(
+                  row.original.current_qty,
+                  row.original.reorder_point,
+                  row.original.safety_stock,
+                );
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    onClick={() =>
+                      isMobile && setSelectedIngredient(row.original)
+                    }
+                    className={`${status.rowClassName} ${
+                      isMobile ? 'cursor-pointer' : ''
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell

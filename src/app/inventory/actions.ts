@@ -32,6 +32,7 @@ export async function deleteMovementAction(id: number) {
 export async function createIngredientAction(input: {
   ingredient_name: string;
   category?: string;
+  specification?: string;
   unit: string;
   price?: number;
   current_qty?: number;
@@ -54,6 +55,7 @@ export async function updateIngredientAction(
   input: {
     ingredient_name?: string;
     category?: string;
+    specification?: string | null;
     unit?: string;
     price?: number | null;
     reorder_point?: number | null;

@@ -57,13 +57,19 @@ const movementTypeConfig: Record<
 // 날짜 포맷
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours < 12 ? '오전' : '오후';
+  const hour12 = hours % 12 || 12;
+  const hourStr = String(hour12).padStart(2, '0');
+  return {
+    datePart: `${year}. ${month}. ${day}.`,
+    ampm,
+    time: `${hourStr}:${minutes}`,
+  };
 };
 
 // 숫자 포맷 (원화)
@@ -79,16 +85,34 @@ type MovementsTableProps = {
   data: StockMovement[];
   onEdit?: (movement: StockMovement) => void;
   onDelete?: (id: number) => void;
+  typeFilter?: string;
+  onTypeFilterChange?: (value: string) => void;
 };
 
-export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) {
+export function MovementsTable({
+  data,
+  onEdit,
+  onDelete,
+  typeFilter: externalTypeFilter,
+  onTypeFilterChange,
+}: MovementsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
-  const [typeFilter, setTypeFilter] = React.useState<string>('all');
+  const [internalTypeFilter, setInternalTypeFilter] =
+    React.useState<string>('all');
+
+  const typeFilter = externalTypeFilter ?? internalTypeFilter;
+  const handleTypeFilterChange = (value: string) => {
+    if (onTypeFilterChange) {
+      onTypeFilterChange(value);
+    } else {
+      setInternalTypeFilter(value);
+    }
+  };
 
   const columns: ColumnDef<StockMovement>[] = [
     {
@@ -96,17 +120,21 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
       header: ({ column }) => (
         <Button
           variant='ghost'
+          className='-ml-3'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           일시
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='h-4 w-4' />
         </Button>
       ),
-      cell: ({ row }) => (
-        <div className='text-sm'>
-          {formatDate(row.getValue('created_at'))}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const { datePart, ampm, time } = formatDate(row.getValue('created_at'));
+        return (
+          <div className='text-sm tabular-nums'>
+            {datePart} <span className='inline-block w-6'>{ampm}</span> {time}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'movement_type',
@@ -119,7 +147,7 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
         };
         return (
           <span
-            className={`px-2 py-1 rounded text-xs font-medium ${config.className}`}
+            className={`px-2 py-1 rounded text-xs font-medium config.className}`}
           >
             {config.label}
           </span>
@@ -135,10 +163,11 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
       header: ({ column }) => (
         <Button
           variant='ghost'
+          className='-ml-3'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           재료명
-          <ArrowUpDown className='ml-2 h-4 w-4' />
+          <ArrowUpDown className='h-4 w-4' />
         </Button>
       ),
       cell: ({ row }) => (
@@ -147,20 +176,51 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
     },
     {
       accessorKey: 'quantity',
-      header: () => <div className='text-right'>수량</div>,
+      header: '수량',
       cell: ({ row }) => {
         const quantity = row.getValue('quantity') as number;
         const unit = row.original.ingredient_unit || '';
         const type = row.original.movement_type;
-        const sign = type === 'in' ? '+' : type === 'adjustment' ? '' : '-';
-        const color =
-          type === 'in'
-            ? 'text-green-600'
-            : type === 'out' || type === 'waste'
-              ? 'text-red-600'
-              : '';
+        const previousQty = row.original.previous_qty;
+        const resultingQty = row.original.resulting_qty;
+
+        let sign = '';
+        let color = '';
+
+        if (type === 'in') {
+          sign = '+';
+          color = 'text-green-600';
+        } else if (type === 'out' || type === 'waste') {
+          sign = '-';
+          color = 'text-red-600';
+        } else if (type === 'adjustment') {
+          // 조정은 quantity 값의 부호에 따라 표시
+          sign = quantity >= 0 ? '+' : '';
+          color = quantity >= 0 ? 'text-green-600' : 'text-red-600';
+        }
+
+        // 조정 타입이고 이전/결과 수량이 있으면 상세 표시
+        if (
+          type === 'adjustment' &&
+          previousQty !== undefined &&
+          resultingQty !== undefined
+        ) {
+          return (
+            <div className='text-xs'>
+              <span className='text-muted-foreground'>{previousQty}</span>
+              <span className={`font-medium mx-1 ${color}`}>
+                {sign}
+                {quantity}
+              </span>
+              <span>{'->'}</span>
+              <span className='ml-1'>{resultingQty}</span>
+              <span className='text-muted-foreground ml-1'>{unit}</span>
+            </div>
+          );
+        }
+
         return (
-          <div className={`text-right font-medium ${color}`}>
+          <div className={`font-medium ${color}`}>
             {sign}
             {quantity} {unit}
           </div>
@@ -169,23 +229,19 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
     },
     {
       accessorKey: 'unit_price',
-      header: () => <div className='text-right'>단가</div>,
+      header: '단가',
       cell: ({ row }) => {
         const price = row.getValue('unit_price') as number | undefined;
-        return (
-          <div className='text-right'>
-            {price ? formatCurrency(price) : '-'}
-          </div>
-        );
+        return <div>{price ? formatCurrency(price) : '-'}</div>;
       },
     },
     {
       accessorKey: 'total_price',
-      header: () => <div className='text-right'>총액</div>,
+      header: '총액',
       cell: ({ row }) => {
         const price = row.getValue('total_price') as number | undefined;
         return (
-          <div className='text-right font-medium'>
+          <div className='font-medium'>
             {price ? formatCurrency(price) : '-'}
           </div>
         );
@@ -203,7 +259,9 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
     {
       accessorKey: 'supplier',
       header: '공급처',
-      cell: ({ row }) => <div>{row.getValue('supplier') || '-'}</div>,
+      cell: ({ row }) => (
+        <div className='text-left'>{row.getValue('supplier') || '-'}</div>
+      ),
     },
     {
       id: 'actions',
@@ -284,7 +342,7 @@ export function MovementsTable({ data, onEdit, onDelete }: MovementsTableProps) 
           }
           className='max-w-sm'
         />
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={typeFilter} onValueChange={handleTypeFilterChange}>
           <SelectTrigger className='w-[150px]'>
             <SelectValue placeholder='유형 필터' />
           </SelectTrigger>

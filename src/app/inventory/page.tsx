@@ -22,6 +22,7 @@ const Inventory = async () => {
     ingredient_id: item.ingredient_id ?? '',
     ingredient_name: item.ingredient_name ?? '',
     category: item.category ?? '',
+    specification: item.specification ?? null,
     unit: item.unit ?? '',
     price: item.price ?? 0,
     current_qty: item.current_qty ?? 0,

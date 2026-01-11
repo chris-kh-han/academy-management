@@ -110,6 +110,7 @@ export function AddIngredientDialog({
   const [ingredientName, setIngredientName] = React.useState('');
   const [category, setCategory] = React.useState('');
   const [customCategory, setCustomCategory] = React.useState('');
+  const [specification, setSpecification] = React.useState('');
   const [unit, setUnit] = React.useState('');
   const [customUnit, setCustomUnit] = React.useState('');
   const [currentQty, setCurrentQty] = React.useState('');
@@ -122,6 +123,7 @@ export function AddIngredientDialog({
       setIngredientName('');
       setCategory('');
       setCustomCategory('');
+      setSpecification('');
       setUnit('');
       setCustomUnit('');
       setCurrentQty('');
@@ -167,6 +169,7 @@ export function AddIngredientDialog({
       const result = await createIngredientAction({
         ingredient_name: trimmedName,
         category: finalCategory,
+        specification: specification.trim() || undefined,
         unit: finalUnit,
         current_qty: currentQty ? Number(currentQty) : undefined,
         reorder_point: reorderPoint ? Number(reorderPoint) : undefined,
@@ -240,7 +243,9 @@ export function AddIngredientDialog({
                     <SelectLabel className='text-gray-400 text-xs'>
                       전체 카테고리
                     </SelectLabel>
-                    {CATEGORY_OPTIONS.map((option) => (
+                    {CATEGORY_OPTIONS.filter(
+                      (option) => !existingCategories.includes(option.value),
+                    ).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -257,6 +262,20 @@ export function AddIngredientDialog({
                 />
               )}
             </div>
+          </div>
+
+          {/* 규격 */}
+          <div className='grid grid-cols-4 items-center gap-4'>
+            <Label htmlFor='specification' className='text-right'>
+              규격
+            </Label>
+            <Input
+              id='specification'
+              className='col-span-3 placeholder:text-gray-400'
+              value={specification}
+              onChange={(e) => setSpecification(e.target.value)}
+              placeholder='예: 1kg*10pk, 500g*8pk'
+            />
           </div>
 
           {/* 단위 */}

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,12 @@ export function InventoryContent({
   movements,
   summary,
 }: InventoryContentProps) {
+  const searchParams = useSearchParams();
+
+  // URL에서 초기값 읽기
+  const initialTab = searchParams.get('tab') || 'status';
+  const initialFilter = searchParams.get('filter') || 'all';
+
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [dialogType, setDialogType] = React.useState<MovementType>('in');
   const [dialogIngredientId, setDialogIngredientId] = React.useState<
@@ -35,12 +42,56 @@ export function InventoryContent({
   >(undefined);
   const [addIngredientOpen, setAddIngredientOpen] = React.useState(false);
   const [editIngredientOpen, setEditIngredientOpen] = React.useState(false);
-  const [editIngredient, setEditIngredient] = React.useState<Ingredient | null>(null);
+  const [editIngredient, setEditIngredient] = React.useState<Ingredient | null>(
+    null,
+  );
+  const [activeTab, setActiveTabState] = React.useState(initialTab);
+  const [movementTypeFilter, setMovementTypeFilterState] =
+    React.useState(initialFilter);
+
+  // URL 업데이트 (히스토리용)
+  const updateUrl = React.useCallback((tab: string, filter: string) => {
+    const params = new URLSearchParams();
+    if (tab !== 'status') params.set('tab', tab);
+    if (filter !== 'all') params.set('filter', filter);
+    const queryString = params.toString();
+    const newUrl = `/inventory${queryString ? `?${queryString}` : ''}`;
+    window.history.pushState({ tab, filter }, '', newUrl);
+  }, []);
+
+  // 뒤로가기/앞으로가기 감지
+  React.useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        setActiveTabState(event.state.tab || 'status');
+        setMovementTypeFilterState(event.state.filter || 'all');
+      } else {
+        // URL에서 읽기
+        const params = new URLSearchParams(window.location.search);
+        setActiveTabState(params.get('tab') || 'status');
+        setMovementTypeFilterState(params.get('filter') || 'all');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    const filter = tab === 'history' ? movementTypeFilter : 'all';
+    updateUrl(tab, filter);
+  };
+
+  const setMovementTypeFilter = (filter: string) => {
+    setMovementTypeFilterState(filter);
+    updateUrl(activeTab, filter);
+  };
 
   const ingredientOptions = ingredients.map((i) => ({
     id: i.id,
     name: i.ingredient_name,
     unit: i.unit,
+    current_qty: i.current_qty,
   }));
 
   // 기존 재료들의 카테고리 추출 (중복 제거, 빈값 제외)
@@ -63,6 +114,12 @@ export function InventoryContent({
   const handleEditIngredient = (ingredient: Ingredient) => {
     setEditIngredient(ingredient);
     setEditIngredientOpen(true);
+  };
+
+  const handleSummaryCardClick = (type: MovementType) => {
+    setActiveTabState('history');
+    setMovementTypeFilterState(type);
+    updateUrl('history', type);
   };
 
   return (
@@ -93,14 +150,20 @@ export function InventoryContent({
         </div>
       </div>
 
-      <Tabs defaultValue='status' className='space-y-4'>
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className='space-y-4'
+      >
         <TabsList>
           <TabsTrigger value='status'>현황</TabsTrigger>
           <TabsTrigger value='history'>입출고 이력</TabsTrigger>
         </TabsList>
-
         <TabsContent value='status' className='space-y-6'>
-          <MovementsSummary summary={summary} />
+          <MovementsSummary
+            summary={summary}
+            onCardClick={handleSummaryCardClick}
+          />
           <IngredientsTable
             data={ingredients}
             onMovement={handleOpenMovementDialog}
@@ -108,8 +171,13 @@ export function InventoryContent({
           />
         </TabsContent>
 
+        {/* 입출고 이력 */}
         <TabsContent value='history'>
-          <MovementsTable data={movements} />
+          <MovementsTable
+            data={movements}
+            typeFilter={movementTypeFilter}
+            onTypeFilterChange={setMovementTypeFilter}
+          />
         </TabsContent>
       </Tabs>
 
