@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Card,
   CardContent,
@@ -51,13 +52,13 @@ export default function BusinessSettingsForm({
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }

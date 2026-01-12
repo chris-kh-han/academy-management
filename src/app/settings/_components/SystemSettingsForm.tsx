@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
         // 테마 변경 시 즉시 적용
         if (settings.theme === 'dark') {
           document.documentElement.classList.add('dark');
@@ -95,11 +96,11 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
           }
         }
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }

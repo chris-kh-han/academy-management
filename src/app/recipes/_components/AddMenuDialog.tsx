@@ -16,6 +16,7 @@ import { createMenu } from '../_actions/createMenu';
 import { useBranch } from '@/contexts/BranchContext';
 import { cn } from '@/lib/utils';
 import { ImageUpload } from '@/components/ImageUpload';
+import { toast } from 'react-toastify';
 
 type AllIngredient = {
   ingredient_id: string;
@@ -120,19 +121,15 @@ export function AddMenuDialog({
     const trimmedMenuName = menuName.replace(/\s/g, '');
 
     if (!trimmedMenuName) {
-      alert('메뉴 이름을 입력해주세요.');
+      toast.error('메뉴 이름을 입력해주세요.');
       return;
     }
     if (!price || parseFloat(price) <= 0) {
-      alert('가격을 입력해주세요.');
+      toast.error('가격을 입력해주세요.');
       return;
     }
     if (!currentBranch?.id) {
-      alert('지점 정보가 없습니다.');
-      return;
-    }
-    if (!categoryId) {
-      alert('카테고리 정보가 없습니다.');
+      toast.error('지점 정보가 없습니다.');
       return;
     }
 
@@ -141,7 +138,7 @@ export function AddMenuDialog({
       const result = await createMenu(
         {
           menu_name: trimmedMenuName,
-          category_id: categoryId, // category 대신 category_id 사용
+          category_id: categoryId, // 카테고리 없어도 됨
           price: parseFloat(price),
           branch_id: currentBranch.id,
           image_url: imageUrl,
@@ -158,15 +155,17 @@ export function AddMenuDialog({
 
       if (result.success) {
         if (result.warning) {
-          alert(result.warning);
+          toast.warning(result.warning);
+        } else {
+          toast.success('메뉴가 추가되었습니다.');
         }
         onOpenChange(false);
       } else {
-        alert('저장 실패: ' + result.error);
+        toast.error('저장 실패: ' + result.error);
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }

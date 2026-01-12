@@ -8,6 +8,7 @@ import {
   Trash2,
   GripVertical,
   ChevronRight,
+  Upload,
 } from 'lucide-react';
 import {
   DndContext,
@@ -30,12 +31,25 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'react-toastify';
 import { EditRecipeDialog } from './EditRecipeDialog';
 import { AddMenuDialog } from './AddMenuDialog';
 import { AddCategoryDialog } from './AddCategoryDialog';
 import { EditCategoryDialog } from './EditCategoryDialog';
 import { EditOptionDialog } from './EditOptionDialog';
+import { AddOptionDialog } from './AddOptionDialog';
+import { MenuUploadDialog } from './MenuUploadDialog';
 import {
   deleteCategory,
   updateCategoryOrder,
@@ -76,12 +90,24 @@ type RecipeRow = {
   menuName: string;
   ingredients: Ingredient[];
   imageUrl?: string;
+  categoryId?: string;
 };
 
 type AllIngredient = {
   ingredient_id: string;
   ingredient_name: string;
   category: string;
+  unit?: string;
+};
+
+type CategoryOption = {
+  link_id: string;
+  option_id: string;
+  option_name: string;
+  option_category: string;
+  additional_price: number;
+  image_url?: string;
+  is_active: boolean;
 };
 
 type MenuBoardProps = {
@@ -97,15 +123,21 @@ type MenuBoardProps = {
   >;
   allIngredients: AllIngredient[];
   existingCategories: string[];
+  optionsByCategory: Record<string, CategoryOption[]>;
+  optionsByMenu: Record<string, CategoryOption[]>;
 };
 
 // SortableCategory 컴포넌트 (메뉴 카테고리용)
 type SortableCategoryProps = {
   category: MenuCategory;
   categoryMenus: Menu[];
+  categoryOptions: CategoryOption[];
+  optionsByMenu: Record<string, CategoryOption[]>;
   recipes: Record<string, { menuName: string; ingredients: Ingredient[] }>;
   onMenuClick: (menu: Menu) => void;
+  onOptionClick: (option: CategoryOption) => void;
   onAddMenu: (categoryId: string) => void;
+  onAddOption: (categoryId: string) => void;
   onEditCategory: (category: MenuCategory) => void;
   onDeleteCategory: (categoryId: string) => void;
   formatPrice: (price: number) => string;
@@ -116,9 +148,13 @@ type SortableCategoryProps = {
 function SortableCategory({
   category,
   categoryMenus,
+  categoryOptions,
+  optionsByMenu,
   recipes,
   onMenuClick,
+  onOptionClick,
   onAddMenu,
+  onAddOption,
   onEditCategory,
   onDeleteCategory,
   formatPrice,
@@ -180,6 +216,14 @@ function SortableCategory({
           >
             <Plus className='h-4 w-4 mr-1' />
             메뉴 추가
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => onAddOption(category.id)}
+          >
+            <Plus className='h-4 w-4 mr-1' />
+            옵션 추가
           </Button>
           <Button
             variant='ghost'
@@ -284,10 +328,70 @@ function SortableCategory({
                         </span>
                       </div>
                     )}
+
+                    {/* 메뉴별 옵션 표시 */}
+                    {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
+                      <div className='w-full'>
+                        <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
+                          옵션 {optionsByMenu[menu.menu_id].length}개
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* 옵션 섹션 */}
+        {categoryOptions.length > 0 && (
+          <div className='mt-6 pt-4 border-t border-gray-200 dark:border-gray-800'>
+            <h3 className='text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3'>
+              옵션 ({categoryOptions.length}개)
+            </h3>
+            <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3'>
+              {categoryOptions.map((option) => (
+                <Card
+                  key={option.link_id}
+                  className={cn(
+                    'group cursor-pointer transition-all hover:shadow-md hover:scale-105',
+                    'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
+                  )}
+                  onClick={() => onOptionClick(option)}
+                >
+                  <CardContent className='p-3'>
+                    <div className='flex flex-col items-center text-center space-y-2'>
+                      {/* 원형 이미지 */}
+                      <div className='relative w-12 h-12 rounded-full bg-linear-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center overflow-hidden border border-blue-200 dark:border-blue-700'>
+                        {option.image_url ? (
+                          <Image
+                            src={option.image_url}
+                            alt={option.option_name}
+                            fill
+                            className='object-cover'
+                          />
+                        ) : (
+                          <div className='text-lg font-bold text-blue-600 dark:text-blue-300'>
+                            {option.option_name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 옵션명 */}
+                      <h4 className='font-medium text-xs text-gray-900 dark:text-gray-50 line-clamp-2'>
+                        {option.option_name}
+                      </h4>
+
+                      {/* 추가 가격 */}
+                      <p className='text-xs font-semibold text-blue-600 dark:text-blue-400'>
+                        +{new Intl.NumberFormat('ko-KR').format(option.additional_price)}원
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -452,6 +556,8 @@ export function MenuBoard({
   categories,
   recipes,
   allIngredients,
+  optionsByCategory,
+  optionsByMenu,
 }: MenuBoardProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [editingRecipe, setEditingRecipe] = React.useState<RecipeRow | null>(
@@ -463,11 +569,22 @@ export function MenuBoard({
   const [addMenuCategoryId, setAddMenuCategoryId] = React.useState<
     string | null
   >(null);
+  const [addMenuOpen, setAddMenuOpen] = React.useState(false);
   const [addCategoryOpen, setAddCategoryOpen] = React.useState(false);
   const [addCategoryType, setAddCategoryType] =
     React.useState<CategoryType>('menu');
   const [editingCategory, setEditingCategory] =
     React.useState<MenuCategory | null>(null);
+
+  // 삭제 확인 모달 상태
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [categoryToDelete, setCategoryToDelete] = React.useState<{
+    id: string;
+    menuCount: number;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [menuUploadOpen, setMenuUploadOpen] = React.useState(false);
+  const [addOptionCategoryId, setAddOptionCategoryId] = React.useState<string | null>(null);
 
   // 드래그 상태
   const [activeMenuCategoryId, setActiveMenuCategoryId] = React.useState<
@@ -567,8 +684,9 @@ export function MenuBoard({
   );
 
   // 카테고리별 메뉴 그룹핑
-  const menusByCategory = React.useMemo(() => {
+  const { menusByCategory, uncategorizedMenus } = React.useMemo(() => {
     const grouped: Record<string, Menu[]> = {};
+    const uncategorized: Menu[] = [];
 
     // 카테고리 초기화
     menuCategories.forEach((cat) => {
@@ -579,32 +697,14 @@ export function MenuBoard({
     filteredMenus.forEach((menu) => {
       if (menu.category_id && grouped[menu.category_id]) {
         grouped[menu.category_id].push(menu);
+      } else {
+        uncategorized.push(menu);
       }
     });
 
-    return grouped;
+    return { menusByCategory: grouped, uncategorizedMenus: uncategorized };
   }, [menuCategories, filteredMenus]);
 
-  // 카테고리별 옵션 그룹핑
-  const optionsByCategory = React.useMemo(() => {
-    const grouped: Record<string, MenuOption[]> = {};
-
-    optionCategories.forEach((cat) => {
-      grouped[cat.id] = [];
-    });
-
-    menuOptions.forEach((option) => {
-      // option_category로 매칭 (임시)
-      const matchedCategory = optionCategories.find(
-        (cat) => cat.slug === option.option_category,
-      );
-      if (matchedCategory) {
-        grouped[matchedCategory.id].push(option);
-      }
-    });
-
-    return grouped;
-  }, [optionCategories, menuOptions]);
 
   const handleMenuClick = (menu: Menu) => {
     const recipe = recipes[menu.menu_id];
@@ -613,6 +713,7 @@ export function MenuBoard({
       menuName: menu.menu_name,
       ingredients: recipe?.ingredients || [],
       imageUrl: menu.image_url,
+      categoryId: menu.category_id,
     });
   };
 
@@ -629,24 +730,32 @@ export function MenuBoard({
     return `+${new Intl.NumberFormat('ko-KR').format(price)}`;
   };
 
-  // 카테고리 삭제 핸들러
-  const handleDeleteCategory = async (categoryId: string) => {
+  // 카테고리 삭제 핸들러 - 모달 열기
+  const handleDeleteCategory = (categoryId: string) => {
     const categoryMenus = menusByCategory[categoryId] || [];
-    const menuCount = categoryMenus.length;
+    setCategoryToDelete({ id: categoryId, menuCount: categoryMenus.length });
+    setDeleteDialogOpen(true);
+  };
 
-    const message = menuCount > 0
-      ? `이 카테고리와 포함된 ${menuCount}개의 메뉴를 모두 삭제하시겠습니까?\n\n삭제된 메뉴는 복구할 수 없습니다.`
-      : '이 카테고리를 삭제하시겠습니까?';
+  // 카테고리 삭제 확인
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return;
 
-    if (!confirm(message)) {
-      return;
+    setIsDeleting(true);
+    const result = await deleteCategory(categoryToDelete.id);
+
+    if (result.success) {
+      setLocalMenuCategories((prev) =>
+        prev.filter((cat) => cat.id !== categoryToDelete.id)
+      );
+      toast.success('카테고리가 삭제되었습니다.');
+    } else {
+      toast.error('삭제 실패: ' + result.error);
     }
 
-    const result = await deleteCategory(categoryId);
-
-    if (!result.success) {
-      alert('삭제 실패: ' + result.error);
-    }
+    setIsDeleting(false);
+    setDeleteDialogOpen(false);
+    setCategoryToDelete(null);
   };
 
   // 메뉴 카테고리 드래그 핸들러
@@ -681,7 +790,7 @@ export function MenuBoard({
     const result = await updateCategoryOrder(categoryIds);
 
     if (!result.success) {
-      alert('카테고리 순서 업데이트 실패: ' + result.error);
+      toast.error('카테고리 순서 업데이트 실패: ' + result.error);
       // 실패 시 원래 순서로 되돌림
       setLocalMenuCategories(menuCategories);
     }
@@ -721,7 +830,7 @@ export function MenuBoard({
     const result = await updateCategoryOrder(categoryIds);
 
     if (!result.success) {
-      alert('카테고리 순서 업데이트 실패: ' + result.error);
+      toast.error('카테고리 순서 업데이트 실패: ' + result.error);
       // 실패 시 원래 순서로 되돌림
       setLocalOptionCategories(optionCategories);
     }
@@ -740,15 +849,25 @@ export function MenuBoard({
             className='pl-10'
           />
         </div>
-        <Button
-          onClick={() => {
-            setAddCategoryType('menu');
-            setAddCategoryOpen(true);
-          }}
-        >
-          <Plus className='h-4 w-4 mr-2' />
-          카테고리 추가
-        </Button>
+        <div className='flex gap-2'>
+          <Button variant='outline' onClick={() => setMenuUploadOpen(true)}>
+            <Upload className='h-4 w-4 mr-2' />
+            메뉴 업로드
+          </Button>
+          <Button variant='outline' onClick={() => setAddMenuOpen(true)}>
+            <Plus className='h-4 w-4 mr-2' />
+            메뉴 추가
+          </Button>
+          <Button
+            onClick={() => {
+              setAddCategoryType('menu');
+              setAddCategoryOpen(true);
+            }}
+          >
+            <Plus className='h-4 w-4 mr-2' />
+            카테고리 추가
+          </Button>
+        </div>
       </div>
 
       {/* 메뉴 카테고리 섹션 */}
@@ -789,15 +908,29 @@ export function MenuBoard({
             >
               {localMenuCategories.map((category) => {
                 const categoryMenus = menusByCategory[category.id] || [];
+                const categoryOpts = optionsByCategory[category.id] || [];
 
                 return (
                   <SortableCategory
                     key={category.id}
                     category={category}
                     categoryMenus={categoryMenus}
+                    categoryOptions={categoryOpts}
+                    optionsByMenu={optionsByMenu}
                     recipes={recipes}
                     onMenuClick={handleMenuClick}
+                    onOptionClick={(opt) => {
+                      setEditingOption({
+                        option_id: Number(opt.option_id),
+                        option_name: opt.option_name,
+                        option_category: opt.option_category as 'edge' | 'topping' | 'beverage',
+                        additional_price: opt.additional_price,
+                        image_url: opt.image_url,
+                        is_active: opt.is_active,
+                      });
+                    }}
                     onAddMenu={setAddMenuCategoryId}
+                    onAddOption={setAddOptionCategoryId}
                     onEditCategory={setEditingCategory}
                     onDeleteCategory={handleDeleteCategory}
                     formatPrice={formatPrice}
@@ -831,88 +964,60 @@ export function MenuBoard({
           </DndContext>
         )}
 
-        {/* 구분선 */}
-        {menuCategories.length > 0 && optionCategories.length > 0 && (
-          <div className='relative my-12'>
-            <div className='absolute inset-0 flex items-center'>
-              <div className='w-full border-t-2 border-gray-300 dark:border-gray-700'></div>
-            </div>
-            <div className='relative flex justify-center'>
-              <span className='bg-white dark:bg-gray-950 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                추가 옵션
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* 옵션 카테고리 섹션 */}
-        {localOptionCategories.length > 0 && (
-          <div className='space-y-8'>
-            <div className='flex justify-end'>
-              <Button
-                variant='outline'
-                onClick={() => {
-                  setAddCategoryType('option');
-                  setAddCategoryOpen(true);
-                }}
-              >
-                <Plus className='h-4 w-4 mr-2' />
-                옵션 카테고리 추가
-              </Button>
-            </div>
-
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleOptionCategoryDragStart}
-              onDragEnd={handleOptionCategoryDragEnd}
-            >
-              <SortableContext
-                items={localOptionCategories.map((cat) => cat.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {localOptionCategories.map((category) => {
-                  const categoryOptions = optionsByCategory[category.id] || [];
-
-                  return (
-                    <SortableOptionCategory
-                      key={category.id}
-                      category={category}
-                      categoryOptions={categoryOptions}
-                      onOptionClick={setEditingOption}
-                      onEditCategory={setEditingCategory}
-                      onDeleteCategory={handleDeleteCategory}
-                      formatAdditionalPrice={formatAdditionalPrice}
-                      isCollapsed={collapsedCategories.has(category.id)}
-                      onToggleCollapse={() => toggleCategory(category.id)}
-                    />
-                  );
-                })}
-              </SortableContext>
-              <DragOverlay>
-                {activeOptionCategoryId ? (
-                  <div className='opacity-60'>
-                    {(() => {
-                      const category = localOptionCategories.find(
-                        (cat) => cat.id === activeOptionCategoryId,
-                      );
-                      if (!category) return null;
-                      return (
-                        <div className='flex items-center gap-3 p-4 bg-white dark:bg-gray-950 rounded-lg border-2 border-blue-400 dark:border-blue-600 shadow-lg'>
-                          <GripVertical className='h-5 w-5 text-gray-400' />
-                          <span className='text-3xl'>{category.icon}</span>
-                          <h2 className='text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide'>
-                            {category.name}
-                          </h2>
-                        </div>
-                      );
-                    })()}
+        {/* 미분류 메뉴 */}
+        {uncategorizedMenus.length > 0 && (
+          <Card className='border-dashed border-gray-300 dark:border-gray-700'>
+            <CardHeader className='pb-4'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  <span className='text-3xl'>📋</span>
+                  <div>
+                    <h2 className='text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide'>
+                      미분류
+                    </h2>
+                    <p className='text-sm text-gray-500 dark:text-gray-400'>
+                      {uncategorizedMenus.length}개 메뉴
+                    </p>
                   </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
+                {uncategorizedMenus.map((menu) => (
+                  <div
+                    key={menu.menu_id}
+                    className='group relative cursor-pointer'
+                    onClick={() => handleMenuClick(menu)}
+                  >
+                    <div className='aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm group-hover:shadow-md transition-shadow'>
+                      {menu.image_url ? (
+                        <img
+                          src={menu.image_url}
+                          alt={menu.menu_name}
+                          className='w-full h-full object-cover'
+                        />
+                      ) : (
+                        <div className='w-full h-full flex items-center justify-center text-4xl text-gray-400'>
+                          🍽️
+                        </div>
+                      )}
+                    </div>
+                    <div className='mt-2 text-center'>
+                      <p className='font-medium text-sm truncate'>
+                        {menu.menu_name}
+                      </p>
+                      <p className='text-xs text-gray-500'>
+                        {formatPrice(menu.price)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
+
       </div>
 
       {/* 다이얼로그들 */}
@@ -925,15 +1030,23 @@ export function MenuBoard({
           ingredients={editingRecipe.ingredients}
           imageUrl={editingRecipe.imageUrl}
           allIngredients={allIngredients}
+          categories={menuCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
+          currentCategoryId={editingRecipe.categoryId}
+          menuOptions={optionsByMenu[editingRecipe.menuId] || []}
         />
       )}
 
-      {addMenuCategoryId && (
+      {(addMenuCategoryId || addMenuOpen) && (
         <AddMenuDialog
-          open={!!addMenuCategoryId}
-          onOpenChange={(open) => !open && setAddMenuCategoryId(null)}
+          open={!!addMenuCategoryId || addMenuOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAddMenuCategoryId(null);
+              setAddMenuOpen(false);
+            }
+          }}
           allIngredients={allIngredients}
-          categoryId={addMenuCategoryId}
+          categoryId={addMenuCategoryId || undefined}
         />
       )}
 
@@ -958,6 +1071,48 @@ export function MenuBoard({
           option={editingOption}
         />
       )}
+
+      {/* 메뉴 업로드 다이얼로그 */}
+      <MenuUploadDialog
+        open={menuUploadOpen}
+        onOpenChange={setMenuUploadOpen}
+        categories={menuCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
+      />
+
+      {/* 옵션 추가 다이얼로그 */}
+      <AddOptionDialog
+        open={!!addOptionCategoryId}
+        onOpenChange={(open) => !open && setAddOptionCategoryId(null)}
+        categories={menuCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
+        menus={menus.map((m) => ({ menu_id: m.menu_id, menu_name: m.menu_name, category_id: m.category_id }))}
+        preselectedCategoryId={addOptionCategoryId || undefined}
+        optionsByCategory={optionsByCategory}
+        optionsByMenu={optionsByMenu}
+      />
+
+      {/* 카테고리 삭제 확인 모달 */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>카테고리 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              {categoryToDelete?.menuCount && categoryToDelete.menuCount > 0
+                ? `이 카테고리와 포함된 ${categoryToDelete.menuCount}개의 메뉴를 모두 삭제하시겠습니까? 삭제된 메뉴는 복구할 수 없습니다.`
+                : '이 카테고리를 삭제하시겠습니까?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className='bg-destructive text-white hover:bg-destructive/90'
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -618,6 +618,91 @@ export async function bulkCreateIngredients(
   return { success: true, inserted, skipped };
 }
 
+// 메뉴 일괄 생성
+export async function bulkCreateMenus(
+  menus: {
+    menu_name: string;
+    price: number;
+    category_id?: string;
+    category?: string;
+    branch_id: string;
+  }[],
+): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  if (menus.length === 0) {
+    return { success: true, inserted: 0, skipped: 0 };
+  }
+
+  const branchId = menus[0].branch_id;
+
+  // 기존 메뉴명 조회 (중복 체크용)
+  const { data: existingMenus } = await supabase
+    .from('menus')
+    .select('menu_name')
+    .eq('branch_id', branchId);
+
+  const existingNames = new Set(
+    (existingMenus || []).map((m) => m.menu_name),
+  );
+
+  // 중복 제외한 새 메뉴만 필터링
+  const newMenus = menus.filter(
+    (m) => !existingNames.has(m.menu_name),
+  );
+
+  const skipped = menus.length - newMenus.length;
+
+  if (newMenus.length === 0) {
+    return { success: true, inserted: 0, skipped };
+  }
+
+  // 현재 최대 menu_id 조회
+  const { data: maxIdData } = await supabase
+    .from('menus')
+    .select('menu_id')
+    .eq('branch_id', branchId)
+    .order('menu_id', { ascending: false })
+    .limit(1);
+
+  let nextId = 1;
+  if (maxIdData && maxIdData.length > 0) {
+    const lastId = maxIdData[0].menu_id;
+    const match = lastId.match(/M(\d+)/);
+    if (match) {
+      nextId = parseInt(match[1]) + 1;
+    }
+  }
+
+  // 배치 삽입 데이터 준비
+  const insertData = newMenus.map((m, idx) => ({
+    menu_id: `M${String(nextId + idx).padStart(3, '0')}`,
+    menu_name: m.menu_name,
+    price: m.price,
+    category_id: m.category_id || null,
+    category: m.category || null,
+    branch_id: m.branch_id,
+  }));
+
+  // 1000개 단위 청크로 삽입
+  const CHUNK_SIZE = 1000;
+  let inserted = 0;
+
+  for (let i = 0; i < insertData.length; i += CHUNK_SIZE) {
+    const chunk = insertData.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from('menus').insert(chunk);
+
+    if (error) {
+      console.error('bulkCreateMenus error:', error);
+      return { success: false, inserted, skipped, error: error.message };
+    }
+
+    inserted += chunk.length;
+  }
+
+  return { success: true, inserted, skipped };
+}
+
 export async function getAllRecipes() {
   const supabase = createServiceRoleClient();
   const { data: recipes, error } = await supabase
@@ -1869,6 +1954,89 @@ export async function getAllMenuOptions(branchId?: string) {
   return data || [];
 }
 
+// 옵션 링크 타입
+type OptionLinkItem = {
+  link_id: string;
+  option_id: string;
+  option_name: string;
+  option_category: string;
+  additional_price: number;
+  image_url?: string;
+  is_active: boolean;
+};
+
+// 옵션과 카테고리/메뉴 연결 정보 조회
+export async function getOptionsWithLinks(branchId?: string): Promise<{
+  byCategory: Record<string, OptionLinkItem[]>;
+  byMenu: Record<string, OptionLinkItem[]>;
+}> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menu_option_links')
+    .select(`
+      id,
+      category_id,
+      menu_id,
+      menu_options (
+        id,
+        option_name,
+        option_category,
+        additional_price,
+        image_url,
+        is_active
+      )
+    `);
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getOptionsWithLinks error:', error);
+    return { byCategory: {}, byMenu: {} };
+  }
+
+  const byCategory: Record<string, OptionLinkItem[]> = {};
+  const byMenu: Record<string, OptionLinkItem[]> = {};
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (data || []).forEach((link: any) => {
+    const opt = link.menu_options;
+    if (!opt || !opt.is_active) return;
+
+    const item: OptionLinkItem = {
+      link_id: link.id,
+      option_id: opt.id,
+      option_name: opt.option_name,
+      option_category: opt.option_category,
+      additional_price: opt.additional_price,
+      image_url: opt.image_url,
+      is_active: opt.is_active,
+    };
+
+    // 카테고리에 연결된 옵션
+    if (link.category_id) {
+      if (!byCategory[link.category_id]) {
+        byCategory[link.category_id] = [];
+      }
+      byCategory[link.category_id].push(item);
+    }
+
+    // 메뉴에 연결된 옵션
+    if (link.menu_id) {
+      if (!byMenu[link.menu_id]) {
+        byMenu[link.menu_id] = [];
+      }
+      byMenu[link.menu_id].push(item);
+    }
+  });
+
+  return { byCategory, byMenu };
+}
+
 // ========== 메뉴 카테고리 CRUD 함수들 ==========
 
 import type { MenuCategory, MenuCategoryInput } from '@/types';
@@ -1999,13 +2167,10 @@ export async function deleteMenuCategory(
     }
   }
 
-  // 3. 카테고리 소프트 삭제 (is_active = false)
+  // 3. 카테고리 삭제
   const { error } = await supabase
     .from('menu_categories')
-    .update({
-      is_active: false,
-      updated_at: new Date().toISOString(),
-    })
+    .delete()
     .eq('id', id);
 
   if (error) {

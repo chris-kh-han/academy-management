@@ -6,6 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SalesUpload } from './SalesUpload';
 import { CSVPreview } from './CSVPreview';
 import { SalesTable } from './SalesTable';
@@ -48,6 +58,10 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
   } | null>(null);
   const [pendingUploadData, setPendingUploadData] = useState<SalesUploadRow[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  // 삭제 확인 다이얼로그 상태
+  const [deleteSaleId, setDeleteSaleId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleParsed = (data: SalesUploadRow[]) => {
     setParsedData(data);
@@ -202,22 +216,28 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('이 판매 내역을 삭제하시겠습니까?')) {
-      return;
-    }
+  const handleDelete = (id: number) => {
+    setDeleteSaleId(id);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteSaleId) return;
+
+    setIsDeleting(true);
     try {
-      const result = await deleteSale(id);
+      const result = await deleteSale(deleteSaleId);
       if (result.success) {
         toast.success('판매 내역이 삭제되었습니다.');
-        setSalesData((prev) => prev.filter((sale) => sale.id !== id));
+        setSalesData((prev) => prev.filter((sale) => sale.id !== deleteSaleId));
       } else {
         toast.error('삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('Delete error:', error);
       toast.error('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteSaleId(null);
     }
   };
 
@@ -233,6 +253,28 @@ export function SalesContent({ initialSalesData }: SalesContentProps) {
         onConfirm={handleDuplicateConfirm}
         isLoading={isUploading}
       />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={!!deleteSaleId} onOpenChange={(open) => !open && setDeleteSaleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>판매 내역 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 판매 내역을 삭제하시겠습니까? 삭제된 내역은 복구할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 헤더 섹션 */}
       <Card className="bg-white dark:bg-gray-950">

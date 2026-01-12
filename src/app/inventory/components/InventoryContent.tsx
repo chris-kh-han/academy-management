@@ -126,14 +126,14 @@ export function InventoryContent({
 
   return (
     <div className='space-y-6'>
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+      <div className='flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold'>재고 관리</h1>
           <p className='text-muted-foreground mt-1 text-sm'>
             재료 재고 현황을 확인하고 입출고를 관리합니다.
           </p>
         </div>
-        <div className='flex flex-col gap-2 w-full sm:flex-row sm:w-auto'>
+        <div className='flex flex-col gap-2 w-full sm:flex-row sm:flex-wrap sm:w-auto'>
           <Button
             variant='outline'
             className='w-full sm:w-[140px] py-3 sm:py-2 cursor-pointer'

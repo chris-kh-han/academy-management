@@ -5,6 +5,7 @@ import {
   getAllMenus,
   getAllMenuOptions,
   getAllMenuCategories,
+  getOptionsWithLinks,
 } from '@/utils/supabase/supabase';
 import { MenuBoard } from './_components/MenuBoard';
 import { minDelay } from '@/lib/delay';
@@ -19,6 +20,7 @@ const Recipes = async () => {
     allMenus,
     menuOptions,
     menuCategories,
+    optionLinks,
   ] = await Promise.all([
     getAllRecipes(),
     getAllIngredients(),
@@ -26,6 +28,7 @@ const Recipes = async () => {
     getAllMenus(),
     getAllMenuOptions(),
     getAllMenuCategories(),
+    getOptionsWithLinks(),
     minDelay(),
   ]);
 
@@ -105,9 +108,12 @@ const Recipes = async () => {
             ingredient_id: ing.ingredient_id,
             ingredient_name: ing.ingredient_name,
             category: ing.category,
+            unit: ing.unit,
           })) ?? []
         }
         existingCategories={existingCategories}
+        optionsByCategory={optionLinks.byCategory}
+        optionsByMenu={optionLinks.byMenu}
       />
     </div>
   );

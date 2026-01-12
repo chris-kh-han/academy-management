@@ -57,17 +57,38 @@ export async function updateRecipeIngredients(
 
 export async function updateMenuMetadata(
   menuId: string,
-  data: { image_url?: string },
+  data: { image_url?: string; category_id?: string | null },
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createServiceRoleClient();
 
+    // category_id가 변경된 경우 카테고리 이름도 조회
+    let categoryName: string | null = null;
+    if (data.category_id) {
+      const { data: categoryData } = await supabase
+        .from('menu_categories')
+        .select('name')
+        .eq('id', data.category_id)
+        .single();
+      categoryName = categoryData?.name || null;
+    }
+
+    const updateData: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.image_url !== undefined) {
+      updateData.image_url = data.image_url || null;
+    }
+
+    if (data.category_id !== undefined) {
+      updateData.category_id = data.category_id || null;
+      updateData.category = categoryName;
+    }
+
     const { error } = await supabase
       .from('menus')
-      .update({
-        image_url: data.image_url || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('menu_id', menuId);
 
     if (error) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Card,
   CardContent,
@@ -114,13 +115,13 @@ export default function PayrollContent({
         } else {
           setPayrolls([newPayroll, ...payrolls]);
         }
-        alert('급여가 계산되었습니다.');
+        toast.success('급여가 계산되었습니다.');
       } else {
-        alert('급여 계산에 실패했습니다.');
+        toast.error('급여 계산에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error calculating payroll:', error);
-      alert('급여 계산 중 오류가 발생했습니다.');
+      toast.error('급여 계산 중 오류가 발생했습니다.');
     } finally {
       setIsCalculating(false);
     }
@@ -146,13 +147,13 @@ export default function PayrollContent({
               : p,
           ),
         );
-        alert(status === 'confirmed' ? '확정되었습니다.' : '지급 처리되었습니다.');
+        toast.success(status === 'confirmed' ? '확정되었습니다.' : '지급 처리되었습니다.');
       } else {
-        alert('상태 변경에 실패했습니다.');
+        toast.error('상태 변경에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('상태 변경 중 오류가 발생했습니다.');
+      toast.error('상태 변경 중 오류가 발생했습니다.');
     }
   };
 
@@ -193,13 +194,13 @@ export default function PayrollContent({
         }
         setIsSalaryDialogOpen(false);
         setEditingSalary(null);
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving salary:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
