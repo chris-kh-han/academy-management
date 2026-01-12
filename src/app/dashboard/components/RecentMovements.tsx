@@ -52,7 +52,7 @@ export default async function RecentMovements() {
           <table className='w-full'>
             <thead>
               <tr className='border-b border-slate-100'>
-                <th className='text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>재료명</th>
+                <th className='text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>품목명</th>
                 <th className='text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>유형</th>
                 <th className='text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>수량</th>
                 <th className='text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>일시</th>

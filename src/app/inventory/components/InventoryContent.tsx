@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { IngredientsTable, Ingredient } from './IngredientsTable';
@@ -11,6 +11,7 @@ import { MovementsSummary } from './MovementsSummary';
 import { MovementFormDialog } from './MovementFormDialog';
 import { AddIngredientDialog } from './AddIngredientDialog';
 import { EditIngredientDialog } from './EditIngredientDialog';
+import { IngredientUploadDialog } from './IngredientUploadDialog';
 import type { StockMovement, MovementType } from '@/types';
 
 type InventoryContentProps = {
@@ -41,6 +42,7 @@ export function InventoryContent({
     string | undefined
   >(undefined);
   const [addIngredientOpen, setAddIngredientOpen] = React.useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
   const [editIngredientOpen, setEditIngredientOpen] = React.useState(false);
   const [editIngredient, setEditIngredient] = React.useState<Ingredient | null>(
     null,
@@ -134,11 +136,19 @@ export function InventoryContent({
         <div className='flex flex-col gap-2 w-full sm:flex-row sm:w-auto'>
           <Button
             variant='outline'
-            className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
+            className='w-full sm:w-[140px] py-3 sm:py-2 cursor-pointer'
             onClick={() => setAddIngredientOpen(true)}
           >
             <Plus className='mr-2 h-4 w-4' />
             재료 추가
+          </Button>
+          <Button
+            variant='outline'
+            className='w-full sm:w-[140px] py-3 sm:py-2 cursor-pointer'
+            onClick={() => setUploadDialogOpen(true)}
+          >
+            <Upload className='mr-2 h-4 w-4' />
+            일괄 업로드
           </Button>
           <Button
             className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
@@ -200,6 +210,11 @@ export function InventoryContent({
         onOpenChange={setEditIngredientOpen}
         ingredient={editIngredient}
         existingCategories={existingCategories}
+      />
+
+      <IngredientUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
       />
     </div>
   );

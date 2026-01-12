@@ -254,7 +254,7 @@ export default function StockMovementsReport({
                 <TableHeader>
                   <TableRow>
                     <TableHead>일시</TableHead>
-                    <TableHead>재료명</TableHead>
+                    <TableHead>품목명</TableHead>
                     <TableHead>유형</TableHead>
                     <TableHead className='text-right'>수량</TableHead>
                     <TableHead>단위</TableHead>

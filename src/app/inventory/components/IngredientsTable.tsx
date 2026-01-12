@@ -176,7 +176,7 @@ export function IngredientsTable({
             className='-ml-3'
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
-            재료명
+            품목명
             <ArrowUpDown className='h-4 w-4' />
           </Button>
         ),
@@ -395,7 +395,7 @@ export function IngredientsTable({
     <div className='w-full'>
       <div className='flex flex-col gap-2 py-4 md:flex-row md:items-center'>
         <Input
-          placeholder='재료명 검색...'
+          placeholder='품목명 검색...'
           value={
             (table.getColumn('ingredient_name')?.getFilterValue() as string) ??
             ''
@@ -436,7 +436,7 @@ export function IngredientsTable({
                 .filter((column) => column.getCanHide())
                 .map((column) => {
                   const columnNames: Record<string, string> = {
-                    ingredient_name: '재료명',
+                    ingredient_name: '품목명',
                     category: '카테고리',
                     specification: '규격',
                     current_qty: '현재 재고',

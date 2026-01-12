@@ -464,7 +464,7 @@ export async function createIngredient(input: {
   ingredient_name: string;
   category?: string;
   specification?: string;
-  unit: string;
+  unit?: string;
   price?: number;
   current_qty?: number;
   reorder_point?: number;
@@ -540,6 +540,82 @@ export async function updateIngredient(
   }
 
   return { success: true };
+}
+
+// 재료 일괄 추가
+export async function bulkCreateIngredients(
+  ingredients: {
+    ingredient_name: string;
+    category?: string;
+    specification?: string;
+    unit?: string;
+    price?: number;
+    current_qty?: number;
+    reorder_point?: number;
+    safety_stock?: number;
+    branch_id: string;
+  }[],
+): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  if (ingredients.length === 0) {
+    return { success: true, inserted: 0, skipped: 0 };
+  }
+
+  const branchId = ingredients[0].branch_id;
+
+  // 기존 재료명 조회 (중복 체크용)
+  const { data: existingIngredients } = await supabase
+    .from('ingredients')
+    .select('ingredient_name')
+    .eq('branch_id', branchId);
+
+  const existingNames = new Set(
+    (existingIngredients || []).map((i) => i.ingredient_name),
+  );
+
+  // 중복 제외한 새 재료만 필터링
+  const newIngredients = ingredients.filter(
+    (i) => !existingNames.has(i.ingredient_name),
+  );
+
+  const skipped = ingredients.length - newIngredients.length;
+
+  if (newIngredients.length === 0) {
+    return { success: true, inserted: 0, skipped };
+  }
+
+  // 배치 삽입 데이터 준비
+  const insertData = newIngredients.map((i) => ({
+    ingredient_id: `ING-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    ingredient_name: i.ingredient_name,
+    category: i.category || null,
+    specification: i.specification || null,
+    unit: i.unit,
+    price: i.price || 0,
+    current_qty: i.current_qty || 0,
+    reorder_point: i.reorder_point ?? null,
+    safety_stock: i.safety_stock || 0,
+    branch_id: i.branch_id,
+  }));
+
+  // 1000개 단위 청크로 삽입
+  const CHUNK_SIZE = 1000;
+  let inserted = 0;
+
+  for (let i = 0; i < insertData.length; i += CHUNK_SIZE) {
+    const chunk = insertData.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from('ingredients').insert(chunk);
+
+    if (error) {
+      console.error('bulkCreateIngredients error:', error);
+      return { success: false, inserted, skipped, error: error.message };
+    }
+
+    inserted += chunk.length;
+  }
+
+  return { success: true, inserted, skipped };
 }
 
 export async function getAllRecipes() {

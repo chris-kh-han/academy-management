@@ -139,23 +139,7 @@ export function AddIngredientDialog({
     const finalUnit = unit === '기타' ? customUnit.trim() : unit;
 
     if (!trimmedName) {
-      toast.error('재료명을 입력해주세요.');
-      return;
-    }
-
-    if (!finalCategory) {
-      toast.error(
-        category === '기타'
-          ? '카테고리를 입력해주세요.'
-          : '카테고리를 선택해주세요.',
-      );
-      return;
-    }
-
-    if (!finalUnit) {
-      toast.error(
-        unit === '기타' ? '단위를 입력해주세요.' : '단위를 선택해주세요.',
-      );
+      toast.error('품목명을 입력해주세요.');
       return;
     }
 
@@ -196,16 +180,16 @@ export function AddIngredientDialog({
       <DialogContent className='sm:max-w-[500px] sm:top-[10%] sm:translate-y-0'>
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <DialogHeader>
-            <DialogTitle>재료 추가</DialogTitle>
+            <DialogTitle>품목 추가</DialogTitle>
             <DialogDescription>
-              새로운 재료를 등록합니다.
+              새로운 품목을 등록합니다.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
-          {/* 재료명 */}
+          {/* 품목명 */}
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label htmlFor='ingredientName' className='text-right'>
-              재료명 *
+              품목명 *
             </Label>
             <Input
               id='ingredientName'
@@ -216,10 +200,10 @@ export function AddIngredientDialog({
             />
           </div>
 
-          {/* 카테고리 */}
+          {/* 카테고리/}
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label htmlFor='category' className='text-right'>
-              카테고리 *
+              카테고리
             </Label>
             <div className='col-span-3'>
               <Select value={category} onValueChange={setCategory}>
@@ -278,10 +262,10 @@ export function AddIngredientDialog({
             />
           </div>
 
-          {/* 단위 */}
+          {/* 단위/}
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label htmlFor='unit' className='text-right'>
-              단위 *
+              단위
             </Label>
             <div className='col-span-3'>
               <Select value={unit} onValueChange={setUnit}>
@@ -314,10 +298,10 @@ export function AddIngredientDialog({
             </div>
           </div>
 
-          {/* 초기수량 */}
+          {/* 수량 */}
           <div className='grid grid-cols-4 items-center gap-4'>
             <Label htmlFor='currentQty' className='text-right'>
-              초기수량
+              수량
             </Label>
             <Input
               id='currentQty'
@@ -378,7 +362,7 @@ export function AddIngredientDialog({
                   저장 중...
                 </>
               ) : (
-                '재료 추가'
+                '품목 추가'
               )}
             </Button>
           </DialogFooter>

@@ -166,7 +166,7 @@ export function MovementsTable({
           className='-ml-3'
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          재료명
+          품목명
           <ArrowUpDown className='h-4 w-4' />
         </Button>
       ),
@@ -330,7 +330,7 @@ export function MovementsTable({
     <div className='w-full'>
       <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 py-4'>
         <Input
-          placeholder='재료명 검색...'
+          placeholder='품목명 검색...'
           value={
             (table.getColumn('ingredient_name')?.getFilterValue() as string) ??
             ''
@@ -368,7 +368,7 @@ export function MovementsTable({
                 const columnNames: Record<string, string> = {
                   created_at: '일시',
                   movement_type: '유형',
-                  ingredient_name: '재료명',
+                  ingredient_name: '품목명',
                   quantity: '수량',
                   unit_price: '단가',
                   total_price: '총액',

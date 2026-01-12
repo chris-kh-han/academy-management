@@ -194,7 +194,7 @@ export function EditIngredientDialog({
     const finalUnit = unit === '기타' ? customUnit.trim() : unit;
 
     if (!trimmedName) {
-      toast.error('재료명을 입력해주세요.');
+      toast.error('품목명을 입력해주세요.');
       return;
     }
 
@@ -254,10 +254,10 @@ export function EditIngredientDialog({
             <DialogDescription>재료 정보를 수정합니다.</DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
-            {/* 재료명 */}
+            {/* 품목명 */}
             <div className='grid grid-cols-4 items-center gap-4'>
               <Label htmlFor='edit-ingredientName' className='text-right'>
-                재료명 *
+                품목명 *
               </Label>
               <Input
                 id='edit-ingredientName'

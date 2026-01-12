@@ -119,7 +119,7 @@ export default function InventoryReport({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>재료명</TableHead>
+                  <TableHead>품목명</TableHead>
                   <TableHead>카테고리</TableHead>
                   <TableHead className='text-right'>현재 재고</TableHead>
                   <TableHead>단위</TableHead>
@@ -171,14 +171,14 @@ export default function InventoryReport({
       <Card>
         <CardHeader>
           <CardTitle>전체 재고 현황</CardTitle>
-          <CardDescription>재료명 기준 정렬</CardDescription>
+          <CardDescription>품목명 기준 정렬</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='max-h-[500px] overflow-auto'>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>재료명</TableHead>
+                  <TableHead>품목명</TableHead>
                   <TableHead>카테고리</TableHead>
                   <TableHead className='text-right'>현재 재고</TableHead>
                   <TableHead>단위</TableHead>
