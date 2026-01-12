@@ -223,7 +223,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_name">이름</Label>
+                  <Label htmlFor="new_user_name" className="text-xs text-muted-foreground">이름</Label>
                   <Input
                     id="new_user_name"
                     value={newUser.user_name || ''}
@@ -232,7 +232,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_email">이메일</Label>
+                  <Label htmlFor="new_user_email" className="text-xs text-muted-foreground">이메일</Label>
                   <Input
                     id="new_user_email"
                     type="email"
@@ -242,7 +242,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_role">역할</Label>
+                  <Label htmlFor="new_user_role" className="text-xs text-muted-foreground">역할</Label>
                   <Select
                     value={newUser.role}
                     onValueChange={(value) => handleRoleChange(value as UserRole)}
@@ -355,7 +355,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
             {editingUser && (
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>역할</Label>
+                  <Label className="text-xs text-muted-foreground">역할</Label>
                   <Select
                     value={editingUser.role}
                     onValueChange={(value) => handleRoleChange(value as UserRole)}
@@ -373,7 +373,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   </Select>
                 </div>
                 <div className="space-y-3">
-                  <Label>세부 권한</Label>
+                  <Label className="text-xs text-muted-foreground">세부 권한</Label>
                   <div className="space-y-2">
                     {[
                       { key: 'can_access_dashboard', label: '대시보드' },

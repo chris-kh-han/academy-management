@@ -83,7 +83,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="default_margin_rate">기본 마진율 (%)</Label>
+              <Label htmlFor="default_margin_rate" className="text-xs text-muted-foreground">기본 마진율 (%)</Label>
               <Input
                 id="default_margin_rate"
                 type="number"
@@ -97,7 +97,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price_rounding_unit">가격 반올림 단위</Label>
+              <Label htmlFor="price_rounding_unit" className="text-xs text-muted-foreground">가격 반올림 단위</Label>
               <Select
                 value={settings.price_rounding_unit.toString()}
                 onValueChange={(value) => handleChange('price_rounding_unit', parseInt(value))}
@@ -120,7 +120,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
           </div>
 
           <div className="space-y-3">
-            <Label>원가 계산 방식</Label>
+            <Label className="text-xs text-muted-foreground">원가 계산 방식</Label>
             <div className="grid gap-3">
               {calculationMethods.map(method => (
                 <div

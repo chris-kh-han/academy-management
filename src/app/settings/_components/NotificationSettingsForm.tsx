@@ -102,7 +102,7 @@ export default function NotificationSettingsForm({ initialData }: NotificationSe
               {channelOptions.map(option => (
                 <div key={option.key} className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>{option.label}</Label>
+                    <Label className="text-xs text-muted-foreground">{option.label}</Label>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
                   </div>
                   <Switch
@@ -120,7 +120,7 @@ export default function NotificationSettingsForm({ initialData }: NotificationSe
               {typeOptions.map(option => (
                 <div key={option.key} className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>{option.label}</Label>
+                    <Label className="text-xs text-muted-foreground">{option.label}</Label>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
                   </div>
                   <Switch

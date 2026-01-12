@@ -1323,7 +1323,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings | null> {
     .single();
 
   if (error) {
-    console.error('getBusinessSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1353,7 +1353,7 @@ export async function getInventorySettings(): Promise<InventorySettings | null> 
     .single();
 
   if (error) {
-    console.error('getInventorySettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1383,7 +1383,7 @@ export async function getRecipeSettings(): Promise<RecipeSettings | null> {
     .single();
 
   if (error) {
-    console.error('getRecipeSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1413,7 +1413,7 @@ export async function getReportSettings(): Promise<ReportSettings | null> {
     .single();
 
   if (error) {
-    console.error('getReportSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1443,7 +1443,7 @@ export async function getNotificationSettings(): Promise<NotificationSettings | 
     .single();
 
   if (error) {
-    console.error('getNotificationSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1473,7 +1473,7 @@ export async function getSystemSettings(): Promise<SystemSettings | null> {
     .single();
 
   if (error) {
-    console.error('getSystemSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1540,19 +1540,20 @@ export async function deleteUserPermission(userId: string): Promise<boolean> {
 
 // 모든 설정 한번에 가져오기
 export async function getAllSettings() {
-  const [business, inventory, recipe, report, notification, system, users] =
+  // 각 함수 호출 시 에러가 나면 null 반환 (테이블이 없을 수 있음)
+  const safeCall = <T>(fn: () => Promise<T>) => fn().catch(() => null);
+
+  const [inventory, recipe, report, notification, system, users] =
     await Promise.all([
-      getBusinessSettings(),
-      getInventorySettings(),
-      getRecipeSettings(),
-      getReportSettings(),
-      getNotificationSettings(),
-      getSystemSettings(),
-      getUserPermissions(),
+      safeCall(getInventorySettings),
+      safeCall(getRecipeSettings),
+      safeCall(getReportSettings),
+      safeCall(getNotificationSettings),
+      safeCall(getSystemSettings),
+      safeCall(getUserPermissions),
     ]);
 
   return {
-    business,
     inventory,
     recipe,
     report,

@@ -83,7 +83,7 @@ export default function ReportSettingsForm({ initialData }: ReportSettingsFormPr
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="default_period">기본 조회 기간</Label>
+              <Label htmlFor="default_period" className="text-xs text-muted-foreground">기본 조회 기간</Label>
               <Select
                 value={settings.default_period}
                 onValueChange={(value) => handleChange('default_period', value as ReportSettings['default_period'])}
@@ -104,7 +104,7 @@ export default function ReportSettingsForm({ initialData }: ReportSettingsFormPr
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="export_format">기본 내보내기 형식</Label>
+              <Label htmlFor="export_format" className="text-xs text-muted-foreground">기본 내보내기 형식</Label>
               <Select
                 value={settings.export_format}
                 onValueChange={(value) => handleChange('export_format', value as ReportSettings['export_format'])}
@@ -126,7 +126,7 @@ export default function ReportSettingsForm({ initialData }: ReportSettingsFormPr
           <div className="space-y-4 rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>자동 리포트 생성</Label>
+                <Label className="text-xs text-muted-foreground">자동 리포트 생성</Label>
                 <p className="text-sm text-muted-foreground">
                   설정된 주기에 따라 자동으로 리포트를 생성합니다.
                 </p>
@@ -138,7 +138,7 @@ export default function ReportSettingsForm({ initialData }: ReportSettingsFormPr
             </div>
             {settings.auto_generate_enabled && (
               <div className="space-y-2">
-                <Label htmlFor="auto_generate_frequency">자동 생성 주기</Label>
+                <Label htmlFor="auto_generate_frequency" className="text-xs text-muted-foreground">자동 생성 주기</Label>
                 <Select
                   value={settings.auto_generate_frequency}
                   onValueChange={(value) => handleChange('auto_generate_frequency', value as ReportSettings['auto_generate_frequency'])}
