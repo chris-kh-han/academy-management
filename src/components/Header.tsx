@@ -38,11 +38,10 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { label: '대시보드', path: '/dashboard' },
   { label: '재고 관리', path: '/inventory' },
-  { label: '입고/출고 관리', path: '/movements' },
   { label: '메뉴/레서피', path: '/recipes' },
+  { label: '판매 관리', path: '/sales' },
   { label: '리포트', path: '/reports' },
   { label: '설정', path: '/settings' },
-  { label: '초기 설정', path: '/setup', adminOnly: true },
 ];
 
 export default function Header() {

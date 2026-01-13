@@ -54,6 +54,7 @@ import {
   deleteCategory,
   updateCategoryOrder,
 } from '../_actions/categoryActions';
+import { deleteMenu } from '../_actions/createMenu';
 import { cn } from '@/lib/utils';
 import type { MenuCategory, CategoryType } from '@/types';
 import Image from 'next/image';
@@ -182,12 +183,12 @@ function SortableCategory({
       className={cn('space-y-4', isDragging && 'opacity-50')}
     >
       {/* 카테고리 헤더 */}
-      <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-2'>
-        <div className='flex items-center gap-3'>
+      <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-2 gap-2'>
+        <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
           {/* 접기/펼치기 버튼 */}
           <button
             onClick={onToggleCollapse}
-            className='text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 transition-colors'
+            className='text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 transition-colors shrink-0'
           >
             <ChevronRight
               className={cn(
@@ -196,38 +197,46 @@ function SortableCategory({
               )}
             />
           </button>
-          {/* 드래그 핸들 */}
 
-          <span className='text-3xl'>{category.icon}</span>
-          <div>
-            <h2 className='text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide'>
-              {category.name}
-            </h2>
-            <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-              {categoryMenus.length}개 메뉴
-            </p>
+          <span className='text-xl sm:text-3xl shrink-0'>{category.icon}</span>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2'>
+              <h2 className='text-base sm:text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide truncate'>
+                {category.name}
+              </h2>
+              <span className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 shrink-0'>
+                {categoryMenus.length}개
+              </span>
+            </div>
           </div>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-1 sm:gap-2 shrink-0'>
+          {/* 메뉴 추가 버튼 */}
           <Button
             variant='outline'
             size='sm'
+            className='h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm'
             onClick={() => onAddMenu(category.id)}
           >
-            <Plus className='h-4 w-4 mr-1' />
-            메뉴 추가
+            <Plus className='h-3 w-3 sm:h-4 sm:w-4 sm:mr-1' />
+            <span className='hidden sm:inline'>메뉴 추가</span>
+            <span className='sm:hidden'>메뉴</span>
           </Button>
+          {/* 옵션 추가 버튼 */}
           <Button
             variant='outline'
             size='sm'
+            className='h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm'
             onClick={() => onAddOption(category.id)}
           >
-            <Plus className='h-4 w-4 mr-1' />
-            옵션 추가
+            <Plus className='h-3 w-3 sm:h-4 sm:w-4 sm:mr-1' />
+            <span className='hidden sm:inline'>옵션 추가</span>
+            <span className='sm:hidden'>옵션</span>
           </Button>
           <Button
             variant='ghost'
             size='icon'
+            className='h-8 w-8'
             onClick={() => onEditCategory(category)}
           >
             <Pencil className='h-4 w-4' />
@@ -235,6 +244,7 @@ function SortableCategory({
           <Button
             variant='ghost'
             size='icon'
+            className='h-8 w-8'
             onClick={() => onDeleteCategory(category.id)}
           >
             <Trash2 className='h-4 w-4 text-red-500 dark:text-red-400' />
@@ -283,10 +293,11 @@ function SortableCategory({
                 )}
                 onClick={() => onMenuClick(menu)}
               >
-                <CardContent className='p-4'>
-                  <div className='flex flex-col items-center text-center space-y-3'>
+                <CardContent className='p-2 sm:p-4'>
+                  {/* 모바일: 가로 배치, PC: 세로 배치 */}
+                  <div className='flex flex-row sm:flex-col items-center gap-2 sm:gap-0 sm:space-y-3'>
                     {/* 원형 이미지 플레이스홀더 */}
-                    <div className='relative w-24 h-24 rounded-full bg-linear-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 flex items-center justify-center overflow-hidden border-2 border-gray-100 dark:border-gray-800'>
+                    <div className='relative w-10 h-10 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 flex items-center justify-center overflow-hidden border sm:border-2 border-gray-100 dark:border-gray-800 shrink-0'>
                       {menu.image_url ? (
                         <Image
                           src={menu.image_url}
@@ -295,48 +306,58 @@ function SortableCategory({
                           className='object-cover'
                         />
                       ) : (
-                        <div className='text-3xl font-bold text-orange-600 dark:text-orange-300'>
+                        <div className='text-base sm:text-3xl font-bold text-orange-600 dark:text-orange-300'>
                           {menu.menu_name.charAt(0)}
                         </div>
                       )}
 
                       {/* 수정 버튼 오버레이 */}
                       <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center'>
-                        <Pencil className='h-6 w-6 text-white' />
+                        <Pencil className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
                       </div>
                     </div>
 
-                    {/* 메뉴명 */}
-                    <div className='flex-1 w-full'>
-                      <h3 className='font-semibold text-base text-gray-900 dark:text-gray-50 line-clamp-2 min-h-12 flex items-center justify-center'>
-                        {menu.menu_name}
-                      </h3>
-                    </div>
-
-                    {/* 가격 */}
-                    <div className='w-full pt-2 border-t border-gray-100 dark:border-gray-800'>
-                      <p className='text-lg font-bold text-orange-600 dark:text-orange-400'>
-                        {formatPrice(menu.price)}
-                      </p>
-                    </div>
-
-                    {/* 레시피 여부 표시 */}
-                    {recipes[menu.menu_id] && (
-                      <div className='w-full'>
-                        <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400'>
-                          레시피 {recipes[menu.menu_id].ingredients.length}개
-                        </span>
+                    {/* 텍스트 영역 - 모바일에서 왼쪽 정렬, PC에서 중앙 정렬 */}
+                    <div className='flex-1 min-w-0 text-left sm:text-center sm:w-full'>
+                      {/* 메뉴명과 가격 - 모바일에서 한 줄로 */}
+                      <div className='flex items-center justify-between sm:block'>
+                        <div className='min-w-0'>
+                          <h3 className='font-semibold text-xs sm:text-base text-gray-900 dark:text-gray-50 line-clamp-1 sm:line-clamp-2 sm:min-h-12 sm:flex sm:items-center sm:justify-center'>
+                            {menu.menu_name}
+                          </h3>
+                          {/* 배지들 - 모바일에서 품목명 아래 */}
+                          <div className='flex flex-wrap gap-1 mt-0.5 sm:hidden'>
+                            {recipes[menu.menu_id] && (
+                              <span className='inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400'>
+                                레시피 {recipes[menu.menu_id].ingredients.length}
+                              </span>
+                            )}
+                            {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
+                              <span className='inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
+                                옵션 {optionsByMenu[menu.menu_id].length}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <p className='text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400 sm:mt-2 sm:pt-2 sm:border-t sm:border-gray-100 sm:dark:border-gray-800 shrink-0 ml-2 sm:ml-0'>
+                          {formatPrice(menu.price)}
+                        </p>
                       </div>
-                    )}
 
-                    {/* 메뉴별 옵션 표시 */}
-                    {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
-                      <div className='w-full'>
-                        <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
-                          옵션 {optionsByMenu[menu.menu_id].length}개
-                        </span>
+                      {/* 배지들 - PC에서만 표시 */}
+                      <div className='hidden sm:flex flex-wrap gap-1 mt-2 justify-center'>
+                        {recipes[menu.menu_id] && (
+                          <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400'>
+                            레시피 {recipes[menu.menu_id].ingredients.length}개
+                          </span>
+                        )}
+                        {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
+                          <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
+                            옵션 {optionsByMenu[menu.menu_id].length}개
+                          </span>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -849,23 +870,27 @@ export function MenuBoard({
             className='pl-10'
           />
         </div>
-        <div className='flex gap-2'>
-          <Button variant='outline' onClick={() => setMenuUploadOpen(true)}>
-            <Upload className='h-4 w-4 mr-2' />
-            메뉴 업로드
+        <div className='flex flex-row gap-2 w-full sm:w-auto'>
+          <Button variant='outline' onClick={() => setMenuUploadOpen(true)} className='flex-1 sm:flex-none'>
+            <Upload className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>메뉴 업로드</span>
+            <span className='sm:hidden'>업로드</span>
           </Button>
-          <Button variant='outline' onClick={() => setAddMenuOpen(true)}>
-            <Plus className='h-4 w-4 mr-2' />
-            메뉴 추가
+          <Button variant='outline' onClick={() => setAddMenuOpen(true)} className='flex-1 sm:flex-none'>
+            <Plus className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>메뉴 추가</span>
+            <span className='sm:hidden'>메뉴</span>
           </Button>
           <Button
             onClick={() => {
               setAddCategoryType('menu');
               setAddCategoryOpen(true);
             }}
+            className='flex-1 sm:flex-none'
           >
-            <Plus className='h-4 w-4 mr-2' />
-            카테고리 추가
+            <Plus className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>카테고리 추가</span>
+            <span className='sm:hidden'>카테고리</span>
           </Button>
         </div>
       </div>
@@ -966,56 +991,172 @@ export function MenuBoard({
 
         {/* 미분류 메뉴 */}
         {uncategorizedMenus.length > 0 && (
-          <Card className='border-dashed border-gray-300 dark:border-gray-700'>
-            <CardHeader className='pb-4'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-3'>
-                  <span className='text-3xl'>📋</span>
-                  <div>
-                    <h2 className='text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide'>
+          <div className='space-y-4'>
+            {/* 카테고리 헤더 */}
+            <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-2 gap-2'>
+              <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
+                {/* 접기/펼치기 버튼 */}
+                <button
+                  onClick={() => toggleCategory('uncategorized')}
+                  className='text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 transition-colors shrink-0'
+                >
+                  <ChevronRight
+                    className={cn(
+                      'h-5 w-5 transition-transform duration-200',
+                      !collapsedCategories.has('uncategorized') && 'rotate-90',
+                    )}
+                  />
+                </button>
+                <div className='min-w-0'>
+                  <div className='flex items-center gap-2'>
+                    <h2 className='text-base sm:text-2xl font-bold text-gray-900 dark:text-gray-50 uppercase tracking-wide truncate'>
                       미분류
                     </h2>
-                    <p className='text-sm text-gray-500 dark:text-gray-400'>
-                      {uncategorizedMenus.length}개 메뉴
-                    </p>
+                    <span className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 shrink-0'>
+                      {uncategorizedMenus.length}개
+                    </span>
                   </div>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4'>
-                {uncategorizedMenus.map((menu) => (
-                  <div
-                    key={menu.menu_id}
-                    className='group relative cursor-pointer'
-                    onClick={() => handleMenuClick(menu)}
-                  >
-                    <div className='aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm group-hover:shadow-md transition-shadow'>
-                      {menu.image_url ? (
-                        <img
-                          src={menu.image_url}
-                          alt={menu.menu_name}
-                          className='w-full h-full object-cover'
-                        />
-                      ) : (
-                        <div className='w-full h-full flex items-center justify-center text-4xl text-gray-400'>
-                          🍽️
-                        </div>
-                      )}
-                    </div>
-                    <div className='mt-2 text-center'>
-                      <p className='font-medium text-sm truncate'>
-                        {menu.menu_name}
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        {formatPrice(menu.price)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className='flex items-center gap-1 sm:gap-2 shrink-0'>
+                {/* 메뉴 추가 버튼 */}
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm'
+                  onClick={() => setAddMenuOpen(true)}
+                >
+                  <Plus className='h-3 w-3 sm:h-4 sm:w-4 sm:mr-1' />
+                  <span className='hidden sm:inline'>메뉴 추가</span>
+                  <span className='sm:hidden'>메뉴</span>
+                </Button>
+                {/* 옵션 추가 버튼 */}
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm'
+                  onClick={() => setAddOptionCategoryId('__uncategorized__')}
+                >
+                  <Plus className='h-3 w-3 sm:h-4 sm:w-4 sm:mr-1' />
+                  <span className='hidden sm:inline'>옵션 추가</span>
+                  <span className='sm:hidden'>옵션</span>
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='h-8 w-8'
+                  onClick={async () => {
+                    if (confirm(`미분류의 모든 메뉴(${uncategorizedMenus.length}개)를 삭제하시겠습니까? 삭제된 메뉴는 복구할 수 없습니다.`)) {
+                      try {
+                        for (const menu of uncategorizedMenus) {
+                          await deleteMenu(menu.menu_id);
+                        }
+                        toast.success('미분류 메뉴가 모두 삭제되었습니다.');
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('메뉴 삭제 오류:', error);
+                        toast.error('메뉴 삭제 중 오류가 발생했습니다.');
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 className='h-4 w-4 text-red-500 dark:text-red-400' />
+                </Button>
+                <div className='cursor-not-allowed text-gray-300 dark:text-gray-700'>
+                  <GripVertical className='h-5 w-5' />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* 메뉴 그리드 */}
+            <div
+              className={cn(
+                'transition-all duration-300 ease-in-out overflow-hidden',
+                collapsedCategories.has('uncategorized') ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100',
+              )}
+            >
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+              {uncategorizedMenus.map((menu) => (
+                <Card
+                  key={menu.menu_id}
+                  className={cn(
+                    'group cursor-pointer transition-all hover:shadow-lg hover:scale-105',
+                    'bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800',
+                  )}
+                  onClick={() => handleMenuClick(menu)}
+                >
+                  <CardContent className='p-2 sm:p-4'>
+                    {/* 모바일: 가로 배치, PC: 세로 배치 */}
+                    <div className='flex flex-row sm:flex-col items-center gap-2 sm:gap-0 sm:space-y-3'>
+                      {/* 원형 이미지 플레이스홀더 */}
+                      <div className='relative w-10 h-10 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 flex items-center justify-center overflow-hidden border sm:border-2 border-gray-100 dark:border-gray-800 shrink-0'>
+                        {menu.image_url ? (
+                          <Image
+                            src={menu.image_url}
+                            alt={menu.menu_name}
+                            fill
+                            className='object-cover'
+                          />
+                        ) : (
+                          <div className='text-base sm:text-3xl font-bold text-orange-600 dark:text-orange-300'>
+                            {menu.menu_name.charAt(0)}
+                          </div>
+                        )}
+
+                        {/* 수정 버튼 오버레이 */}
+                        <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center'>
+                          <Pencil className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
+                        </div>
+                      </div>
+
+                      {/* 텍스트 영역 - 모바일에서 왼쪽 정렬, PC에서 중앙 정렬 */}
+                      <div className='flex-1 min-w-0 text-left sm:text-center sm:w-full'>
+                        {/* 메뉴명과 가격 - 모바일에서 한 줄로 */}
+                        <div className='flex items-center justify-between sm:block'>
+                          <div className='min-w-0'>
+                            <h3 className='font-semibold text-xs sm:text-base text-gray-900 dark:text-gray-50 line-clamp-1 sm:line-clamp-2 sm:min-h-12 sm:flex sm:items-center sm:justify-center'>
+                              {menu.menu_name}
+                            </h3>
+                            {/* 배지들 - 모바일에서 품목명 아래 */}
+                            <div className='flex flex-wrap gap-1 mt-0.5 sm:hidden'>
+                              {recipes[menu.menu_id] && (
+                                <span className='inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400'>
+                                  레시피 {recipes[menu.menu_id].ingredients.length}
+                                </span>
+                              )}
+                              {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
+                                <span className='inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
+                                  옵션 {optionsByMenu[menu.menu_id].length}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p className='text-sm sm:text-lg font-bold text-orange-600 dark:text-orange-400 sm:mt-2 sm:pt-2 sm:border-t sm:border-gray-100 sm:dark:border-gray-800 shrink-0 ml-2 sm:ml-0'>
+                            {formatPrice(menu.price)}
+                          </p>
+                        </div>
+
+                        {/* 배지들 - PC에서만 표시 */}
+                        <div className='hidden sm:flex flex-wrap gap-1 mt-2 justify-center'>
+                          {recipes[menu.menu_id] && (
+                            <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400'>
+                              레시피 {recipes[menu.menu_id].ingredients.length}개
+                            </span>
+                          )}
+                          {optionsByMenu[menu.menu_id] && optionsByMenu[menu.menu_id].length > 0 && (
+                            <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400'>
+                              옵션 {optionsByMenu[menu.menu_id].length}개
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            </div>
+          </div>
         )}
 
       </div>
@@ -1085,7 +1226,7 @@ export function MenuBoard({
         onOpenChange={(open) => !open && setAddOptionCategoryId(null)}
         categories={menuCategories.map((cat) => ({ id: cat.id, name: cat.name }))}
         menus={menus.map((m) => ({ menu_id: m.menu_id, menu_name: m.menu_name, category_id: m.category_id }))}
-        preselectedCategoryId={addOptionCategoryId || undefined}
+        preselectedCategoryId={addOptionCategoryId === '__uncategorized__' ? undefined : (addOptionCategoryId || undefined)}
         optionsByCategory={optionsByCategory}
         optionsByMenu={optionsByMenu}
       />
