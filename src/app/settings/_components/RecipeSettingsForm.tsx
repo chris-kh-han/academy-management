@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,13 +61,13 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -82,7 +83,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="default_margin_rate">기본 마진율 (%)</Label>
+              <Label htmlFor="default_margin_rate" className="text-xs text-muted-foreground">기본 마진율 (%)</Label>
               <Input
                 id="default_margin_rate"
                 type="number"
@@ -96,7 +97,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price_rounding_unit">가격 반올림 단위</Label>
+              <Label htmlFor="price_rounding_unit" className="text-xs text-muted-foreground">가격 반올림 단위</Label>
               <Select
                 value={settings.price_rounding_unit.toString()}
                 onValueChange={(value) => handleChange('price_rounding_unit', parseInt(value))}
@@ -119,7 +120,7 @@ export default function RecipeSettingsForm({ initialData }: RecipeSettingsFormPr
           </div>
 
           <div className="space-y-3">
-            <Label>원가 계산 방식</Label>
+            <Label className="text-xs text-muted-foreground">원가 계산 방식</Label>
             <div className="grid gap-3">
               {calculationMethods.map(method => (
                 <div

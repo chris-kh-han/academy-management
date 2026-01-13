@@ -21,10 +21,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Trash2, Plus } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { updateRecipeIngredients, updateMenuMetadata } from '../_actions/updateRecipe';
 import { deleteMenu } from '../_actions/createMenu';
+import { removeOptionLink } from '../_actions/optionActions';
 import { ImageUpload } from '@/components/ImageUpload';
 
 type Ingredient = {
@@ -40,6 +48,22 @@ type AllIngredient = {
   ingredient_id: string;
   ingredient_name: string;
   category: string;
+  unit?: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+};
+
+type MenuOptionItem = {
+  link_id: string;
+  option_id: string;
+  option_name: string;
+  option_category: string;
+  additional_price: number;
+  image_url?: string;
+  is_active: boolean;
 };
 
 type EditRecipeDialogProps = {
@@ -50,6 +74,9 @@ type EditRecipeDialogProps = {
   ingredients: Ingredient[];
   imageUrl?: string;
   allIngredients: AllIngredient[];
+  categories?: Category[];
+  currentCategoryId?: string | null;
+  menuOptions?: MenuOptionItem[];
 };
 
 export function EditRecipeDialog({
@@ -60,6 +87,9 @@ export function EditRecipeDialog({
   ingredients,
   imageUrl,
   allIngredients,
+  categories = [],
+  currentCategoryId,
+  menuOptions = [],
 }: EditRecipeDialogProps) {
   const [editedIngredients, setEditedIngredients] = React.useState<
     {
@@ -72,9 +102,11 @@ export function EditRecipeDialog({
     }[]
   >([]);
   const [menuImageUrl, setMenuImageUrl] = React.useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [localOptions, setLocalOptions] = React.useState<MenuOptionItem[]>([]);
 
   React.useEffect(() => {
     if (open) {
@@ -94,18 +126,14 @@ export function EditRecipeDialog({
         }),
       );
       setMenuImageUrl(imageUrl || '');
+      setSelectedCategoryId(currentCategoryId || null);
+      setLocalOptions(menuOptions);
     }
-  }, [open, ingredients, imageUrl, allIngredients]);
+  }, [open, ingredients, imageUrl, allIngredients, currentCategoryId, menuOptions]);
 
   const handleQtyChange = (index: number, value: string) => {
     const newIngredients = [...editedIngredients];
     newIngredients[index].qty = value === '' ? 0 : Number(value);
-    setEditedIngredients(newIngredients);
-  };
-
-  const handleUnitChange = (index: number, value: string) => {
-    const newIngredients = [...editedIngredients];
-    newIngredients[index].unit = value;
     setEditedIngredients(newIngredients);
   };
 
@@ -126,7 +154,7 @@ export function EditRecipeDialog({
           name: unusedIngredient.ingredient_name,
           category: unusedIngredient.category,
           qty: 0,
-          unit: 'g',
+          unit: unusedIngredient.unit || 'g',
           loss_rate: 0,
         },
       ]);
@@ -142,20 +170,40 @@ export function EditRecipeDialog({
       newIngredients[index].ingredient_id = ingredientId;
       newIngredients[index].name = selected.ingredient_name;
       newIngredients[index].category = selected.category;
+      newIngredients[index].unit = selected.unit || 'g';
       setEditedIngredients(newIngredients);
+    }
+  };
+
+  const handleRemoveOption = async (linkId: string) => {
+    try {
+      const result = await removeOptionLink(linkId);
+      if (result.success) {
+        setLocalOptions(localOptions.filter((opt) => opt.link_id !== linkId));
+        toast.success('옵션이 제거되었습니다.');
+      } else {
+        toast.error('옵션 제거 실패: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Remove option error:', error);
+      toast.error('옵션 제거 중 오류가 발생했습니다.');
     }
   };
 
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // 메뉴 메타데이터 업데이트 (이미지 URL)
-      if (menuImageUrl !== (imageUrl || '')) {
+      // 메뉴 메타데이터 업데이트 (이미지 URL, 카테고리)
+      const imageChanged = menuImageUrl !== (imageUrl || '');
+      const categoryChanged = selectedCategoryId !== (currentCategoryId || null);
+
+      if (imageChanged || categoryChanged) {
         const metadataResult = await updateMenuMetadata(menuId, {
-          image_url: menuImageUrl,
+          ...(imageChanged && { image_url: menuImageUrl }),
+          ...(categoryChanged && { category_id: selectedCategoryId }),
         });
         if (!metadataResult.success) {
-          alert('이미지 저장 실패: ' + metadataResult.error);
+          toast.error('저장 실패: ' + metadataResult.error);
           setIsLoading(false);
           return;
         }
@@ -174,13 +222,14 @@ export function EditRecipeDialog({
         })),
       );
       if (result.success) {
+        toast.success('저장되었습니다.');
         onOpenChange(false);
       } else {
-        alert('저장 실패: ' + result.error);
+        toast.error('저장 실패: ' + result.error);
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -222,6 +271,31 @@ export function EditRecipeDialog({
             />
           </div>
 
+          {/* 카테고리 선택 */}
+          {categories.length > 0 && (
+            <div className='space-y-2'>
+              <Label>카테고리</Label>
+              <Select
+                value={selectedCategoryId || 'uncategorized'}
+                onValueChange={(value) =>
+                  setSelectedCategoryId(value === 'uncategorized' ? null : value)
+                }
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='카테고리 선택' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='uncategorized'>미분류</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
             <h4 className='font-medium mb-3'>레시피 재료</h4>
           </div>
@@ -229,17 +303,29 @@ export function EditRecipeDialog({
         <div className='space-y-4'>
           {editedIngredients.map((ing, index) => (
             <div key={index} className='flex items-center gap-2'>
-              <select
+              <Select
                 value={ing.ingredient_id}
-                onChange={(e) => handleIngredientSelect(index, e.target.value)}
-                className='flex-1 rounded-md border px-3 py-2'
+                onValueChange={(value) => handleIngredientSelect(index, value)}
               >
-                {allIngredients.map((opt) => (
-                  <option key={opt.ingredient_id} value={opt.ingredient_id}>
-                    {opt.ingredient_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className='flex-1'>
+                  <SelectValue placeholder='재료 선택' />
+                </SelectTrigger>
+                <SelectContent>
+                  {allIngredients
+                    .filter(
+                      (opt) =>
+                        opt.ingredient_id === ing.ingredient_id ||
+                        !editedIngredients.some(
+                          (e) => e.ingredient_id === opt.ingredient_id
+                        )
+                    )
+                    .map((opt) => (
+                      <SelectItem key={opt.ingredient_id} value={opt.ingredient_id}>
+                        {opt.ingredient_name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
               <Input
                 type='number'
                 value={ing.qty || ''}
@@ -250,8 +336,8 @@ export function EditRecipeDialog({
               <Input
                 type='text'
                 value={ing.unit}
-                onChange={(e) => handleUnitChange(index, e.target.value)}
-                className='w-20'
+                readOnly
+                className='w-20 bg-muted'
                 placeholder='단위'
               />
               <Button
@@ -268,6 +354,42 @@ export function EditRecipeDialog({
             재료 추가
           </Button>
         </div>
+
+        {/* 메뉴 옵션 섹션 */}
+        {localOptions.length > 0 && (
+          <div className='border-t border-gray-200 dark:border-gray-700 pt-4 mt-4'>
+            <h4 className='font-medium mb-3'>메뉴 옵션 ({localOptions.length}개)</h4>
+            <div className='space-y-2'>
+              {localOptions.map((option) => (
+                <div
+                  key={option.link_id}
+                  className='flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800'
+                >
+                  <div className='flex items-center gap-3'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-sm font-bold text-blue-600 dark:text-blue-300'>
+                      {option.option_name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className='font-medium text-sm'>{option.option_name}</p>
+                      <p className='text-xs text-blue-600 dark:text-blue-400'>
+                        +{new Intl.NumberFormat('ko-KR').format(option.additional_price)}원
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => handleRemoveOption(option.link_id)}
+                    className='text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950'
+                  >
+                    <Trash2 className='h-4 w-4' />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <DialogFooter className='flex justify-between sm:justify-between'>
           <Button
             variant='destructive'
@@ -304,7 +426,7 @@ export function EditRecipeDialog({
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              className='bg-destructive text-white hover:bg-destructive/90'
             >
               {isDeleting ? '삭제 중...' : '삭제'}
             </AlertDialogAction>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,13 +60,13 @@ export default function InventorySettingsForm({ initialData }: InventorySettings
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -81,7 +82,7 @@ export default function InventorySettingsForm({ initialData }: InventorySettings
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="low_stock_threshold">재고 부족 알림 임계값</Label>
+              <Label htmlFor="low_stock_threshold" className="text-xs text-muted-foreground">재고 부족 알림 임계값</Label>
               <Input
                 id="low_stock_threshold"
                 type="number"
@@ -94,7 +95,7 @@ export default function InventorySettingsForm({ initialData }: InventorySettings
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="default_unit">기본 단위</Label>
+              <Label htmlFor="default_unit" className="text-xs text-muted-foreground">기본 단위</Label>
               <Select
                 value={settings.default_unit}
                 onValueChange={(value) => handleChange('default_unit', value)}
@@ -116,7 +117,7 @@ export default function InventorySettingsForm({ initialData }: InventorySettings
           <div className="space-y-4 rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>자동 재주문</Label>
+                <Label className="text-xs text-muted-foreground">자동 재주문</Label>
                 <p className="text-sm text-muted-foreground">
                   재고가 부족할 때 자동으로 재주문을 생성합니다.
                 </p>
@@ -128,7 +129,7 @@ export default function InventorySettingsForm({ initialData }: InventorySettings
             </div>
             {settings.auto_reorder_enabled && (
               <div className="space-y-2">
-                <Label htmlFor="auto_reorder_quantity">자동 재주문 수량</Label>
+                <Label htmlFor="auto_reorder_quantity" className="text-xs text-muted-foreground">자동 재주문 수량</Label>
                 <Input
                   id="auto_reorder_quantity"
                   type="number"

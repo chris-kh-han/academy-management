@@ -9,9 +9,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Ban } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createCategory } from '../_actions/categoryActions';
 import { useBranch } from '@/contexts/BranchContext';
@@ -59,9 +69,11 @@ export function AddCategoryDialog({
 }: AddCategoryDialogProps) {
   const { currentBranch } = useBranch();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
+  const [processedName, setProcessedName] = React.useState('');
 
   const [name, setName] = React.useState('');
-  const [icon, setIcon] = React.useState('🍕');
+  const [icon, setIcon] = React.useState<string | null>('🍕');
   const [customIcon, setCustomIcon] = React.useState('');
 
   // 다이얼로그 열릴 때 초기화
@@ -73,11 +85,23 @@ export function AddCategoryDialog({
     }
   }, [open]);
 
-  const handleSave = async () => {
-    const trimmedName = name.trim();
-    const finalIcon = customIcon.trim() || icon;
+  // 직접 입력 시 아이콘 선택 해제
+  const handleCustomIconChange = (value: string) => {
+    setCustomIcon(value);
+    if (value.trim()) {
+      setIcon(null); // 직접 입력하면 프리셋 선택 해제
+    }
+  };
 
-    if (!trimmedName) {
+  // 이름 정규화: 앞뒤 공백 제거 + 연속 공백을 단일 공백으로
+  const normalizeName = (input: string) => {
+    return input.trim().replace(/\s+/g, ' ');
+  };
+
+  const handleSaveClick = () => {
+    const normalized = normalizeName(name);
+
+    if (!normalized) {
       toast.error('카테고리 이름을 입력해주세요.');
       return;
     }
@@ -87,19 +111,28 @@ export function AddCategoryDialog({
       return;
     }
 
+    setProcessedName(normalized);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmSave = async () => {
+    const finalIcon = customIcon.trim() || icon || '';
+
     setIsLoading(true);
+    setShowConfirm(false);
+
     try {
-      const slug = trimmedName
+      const slug = processedName
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
 
       const result = await createCategory({
-        name: trimmedName,
+        name: processedName,
         slug,
         icon: finalIcon,
         category_type: categoryType,
-        branch_id: currentBranch.id,
+        branch_id: currentBranch!.id,
       });
 
       if (result.success) {
@@ -143,8 +176,25 @@ export function AddCategoryDialog({
 
           {/* 아이콘 선택 */}
           <div className='space-y-2'>
-            <Label>아이콘 선택 *</Label>
+            <Label>아이콘 선택</Label>
             <div className='grid grid-cols-8 gap-2 p-2 border rounded-md bg-white dark:bg-gray-950'>
+              {/* 선택 안 함 옵션 */}
+              <button
+                type='button'
+                onClick={() => {
+                  setIcon(null);
+                  setCustomIcon('');
+                }}
+                className={cn(
+                  'text-2xl p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center',
+                  icon === null &&
+                    !customIcon &&
+                    'bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-400',
+                )}
+                title='선택 안 함'
+              >
+                <Ban className='h-5 w-5 text-gray-400' />
+              </button>
               {PREDEFINED_ICONS.map((emoji) => (
                 <button
                   key={emoji}
@@ -172,7 +222,8 @@ export function AddCategoryDialog({
             <Input
               id='customIcon'
               value={customIcon}
-              onChange={(e) => setCustomIcon(e.target.value)}
+              onChange={(e) => handleCustomIconChange(e.target.value)}
+              onFocus={() => setIcon(null)}
               placeholder='이모지를 직접 입력하세요'
               maxLength={2}
             />
@@ -192,7 +243,7 @@ export function AddCategoryDialog({
           >
             취소
           </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
+          <Button onClick={handleSaveClick} disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className='h-4 w-4 mr-2 animate-spin' />
@@ -204,6 +255,34 @@ export function AddCategoryDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* 확인 모달 */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>카테고리 추가 확인</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className='space-y-3'>
+                <p>다음 카테고리를 추가하시겠습니까?</p>
+                <div className='flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-md'>
+                  {(customIcon.trim() || icon) && (
+                    <span className='text-3xl'>{customIcon.trim() || icon}</span>
+                  )}
+                  <span className='font-semibold text-lg text-foreground'>
+                    {processedName}
+                  </span>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSave}>
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

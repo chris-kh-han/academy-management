@@ -101,7 +101,7 @@ export default function BrandBranchSetupForm() {
           <form onSubmit={handleCreateBrand} className='space-y-4'>
             <div className='grid gap-4 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='brandName'>브랜드 이름</Label>
+                <Label htmlFor='brandName' className='text-xs text-muted-foreground'>브랜드 이름</Label>
                 <Input
                   id='brandName'
                   placeholder='예: 피자하우스'
@@ -110,7 +110,7 @@ export default function BrandBranchSetupForm() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='brandSlug'>Slug (URL용)</Label>
+                <Label htmlFor='brandSlug' className='text-xs text-muted-foreground'>Slug (URL용)</Label>
                 <Input
                   id='brandSlug'
                   placeholder='예: pizza-house'

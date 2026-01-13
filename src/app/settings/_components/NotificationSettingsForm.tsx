@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -72,13 +73,13 @@ export default function NotificationSettingsForm({ initialData }: NotificationSe
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -101,7 +102,7 @@ export default function NotificationSettingsForm({ initialData }: NotificationSe
               {channelOptions.map(option => (
                 <div key={option.key} className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>{option.label}</Label>
+                    <Label className="text-xs text-muted-foreground">{option.label}</Label>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
                   </div>
                   <Switch
@@ -119,7 +120,7 @@ export default function NotificationSettingsForm({ initialData }: NotificationSe
               {typeOptions.map(option => (
                 <div key={option.key} className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>{option.label}</Label>
+                    <Label className="text-xs text-muted-foreground">{option.label}</Label>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
                   </div>
                   <Switch

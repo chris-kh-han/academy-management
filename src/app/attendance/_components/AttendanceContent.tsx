@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Card,
   CardContent,
@@ -34,6 +35,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { UserPermission, WorkRecord } from '@/types';
 
 type AttendanceContentProps = {
@@ -56,6 +67,8 @@ export default function AttendanceContent({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<WorkRecord> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteRecordId, setDeleteRecordId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 필터링된 근무 기록
   const filteredRecords = workRecords.filter((record) => {
@@ -112,7 +125,7 @@ export default function AttendanceContent({
 
   const handleSaveRecord = async () => {
     if (!editingRecord?.user_id || !editingRecord?.work_date || !editingRecord?.clock_in) {
-      alert('필수 항목을 입력해주세요.');
+      toast.error('필수 항목을 입력해주세요.');
       return;
     }
 
@@ -134,32 +147,36 @@ export default function AttendanceContent({
         }
         setIsDialogOpen(false);
         setEditingRecord(null);
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving record:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteRecord = async (id: number) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteRecordId) return;
 
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/attendance?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/attendance?id=${deleteRecordId}`, { method: 'DELETE' });
       if (res.ok) {
-        setWorkRecords(workRecords.filter((r) => r.id !== id));
-        alert('삭제되었습니다.');
+        setWorkRecords(workRecords.filter((r) => r.id !== deleteRecordId));
+        toast.success('삭제되었습니다.');
       } else {
-        alert('삭제에 실패했습니다.');
+        toast.error('삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error deleting record:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      toast.error('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteRecordId(null);
     }
   };
 
@@ -315,7 +332,7 @@ export default function AttendanceContent({
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
-                            onClick={() => handleDeleteRecord(record.id!)}
+                            onClick={() => setDeleteRecordId(record.id!)}
                           >
                             삭제
                           </Button>
@@ -441,6 +458,28 @@ export default function AttendanceContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteRecordId} onOpenChange={(open) => !open && setDeleteRecordId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>근무 기록 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 근무 기록을 삭제하시겠습니까? 삭제된 기록은 복구할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

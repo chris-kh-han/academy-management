@@ -3,17 +3,29 @@
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { Camera, X, Loader2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { uploadMenuImage, deleteMenuImage, validateImageFile } from '@/utils/supabase/storage';
+import {
+  uploadMenuImage,
+  deleteMenuImage,
+  validateImageFile,
+} from '@/utils/supabase/storage';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 interface ImageUploadProps {
   value?: string | null; // Current image URL
   onChange: (url: string | null) => void;
-  folder: 'menus' | 'options';
+  folder: 'menus' | 'options' | 'logos';
+  variant?: 'circle' | 'rectangle';
   className?: string;
 }
 
-export function ImageUpload({ value, onChange, folder, className }: ImageUploadProps) {
+export function ImageUpload({
+  value,
+  onChange,
+  folder,
+  variant = 'circle',
+  className,
+}: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,14 +123,17 @@ export function ImageUpload({ value, onChange, folder, className }: ImageUploadP
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      {/* Image Preview Circle */}
+      {/* Image Preview */}
       <div
         className={cn(
-          'relative mx-auto w-[120px] h-[120px] rounded-full border-2 border-dashed cursor-pointer transition-all',
+          'relative mx-auto border-2 border-dashed cursor-pointer transition-all',
+          variant === 'circle'
+            ? 'w-[120px] h-[120px] rounded-full'
+            : 'w-[160px] h-[80px] rounded-lg',
           isDragging
             ? 'border-primary bg-primary/5 scale-105'
             : 'border-gray-300 dark:border-gray-700 hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-900',
-          isUploading && 'pointer-events-none opacity-60'
+          isUploading && 'pointer-events-none opacity-60',
         )}
         onClick={handleClick}
         onDragOver={handleDragOver}
@@ -128,41 +143,52 @@ export function ImageUpload({ value, onChange, folder, className }: ImageUploadP
         {value ? (
           <>
             {/* Image Preview */}
-            <img
+            <Image
               src={value}
-              alt="Preview"
-              className="w-full h-full object-cover rounded-full"
+              alt='Preview'
+              fill
+              className={cn(
+                'object-contain',
+                variant === 'circle' ? 'rounded-full' : 'rounded-lg',
+              )}
             />
 
             {/* Hover Overlay */}
             {!isUploading && (
-              <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-sm font-medium">이미지 변경</span>
+              <div
+                className={cn(
+                  'absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center',
+                  variant === 'circle' ? 'rounded-full' : 'rounded-lg',
+                )}
+              >
+                <span className='text-white text-sm font-medium'>
+                  이미지 변경
+                </span>
               </div>
             )}
 
             {/* Remove Button */}
             {!isUploading && (
               <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute -top-2 -right-2 w-8 h-8 rounded-full shadow-lg"
+                type='button'
+                variant='destructive'
+                size='icon'
+                className='absolute -top-2 -right-2 w-8 h-8 rounded-full shadow-lg'
                 onClick={handleRemove}
               >
-                <X className="w-4 h-4" />
+                <X className='w-4 h-4' />
               </Button>
             )}
           </>
         ) : (
           /* Empty State */
-          <div className="flex flex-col items-center justify-center h-full gap-2">
+          <div className='flex flex-col items-center justify-center h-full gap-2'>
             {isUploading ? (
-              <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+              <Loader2 className='w-8 h-8 text-gray-400 animate-spin' />
             ) : (
               <>
-                <Camera className="w-8 h-8 text-gray-400" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <Camera className='w-8 h-8 text-gray-400' />
+                <span className='text-xs text-gray-500 dark:text-gray-400'>
                   이미지 추가
                 </span>
               </>
@@ -172,35 +198,40 @@ export function ImageUpload({ value, onChange, folder, className }: ImageUploadP
 
         {/* Loading Overlay */}
         {isUploading && (
-          <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          <div
+            className={cn(
+              'absolute inset-0 bg-black/30 flex items-center justify-center',
+              variant === 'circle' ? 'rounded-full' : 'rounded-lg',
+            )}
+          >
+            <Loader2 className='w-8 h-8 text-white animate-spin' />
           </div>
         )}
 
         {/* Hidden File Input */}
         <input
           ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp"
-          className="hidden"
+          type='file'
+          accept='image/jpeg,image/jpg,image/png,image/webp'
+          className='hidden'
           onChange={handleFileInput}
           disabled={isUploading}
         />
       </div>
 
       {/* Drag-and-Drop Hint */}
-      <div className="text-center">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+      <div className='text-center'>
+        <p className='text-xs text-gray-500 dark:text-gray-400'>
           클릭하거나 파일을 드래그하여 업로드
         </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">
+        <p className='text-xs text-gray-400 dark:text-gray-500'>
           JPG, PNG, WEBP (최대 2MB)
         </p>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="text-sm text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-950 p-2 rounded">
+        <div className='text-sm text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-950 p-2 rounded'>
           {error}
         </div>
       )}

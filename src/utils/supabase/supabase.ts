@@ -463,7 +463,8 @@ export async function getAllIngredients() {
 export async function createIngredient(input: {
   ingredient_name: string;
   category?: string;
-  unit: string;
+  specification?: string;
+  unit?: string;
   price?: number;
   current_qty?: number;
   reorder_point?: number;
@@ -491,6 +492,7 @@ export async function createIngredient(input: {
       ingredient_id: `ING-${Date.now()}`,
       ingredient_name: input.ingredient_name,
       category: input.category || null,
+      specification: input.specification || null,
       unit: input.unit,
       price: input.price || 0,
       current_qty: input.current_qty || 0,
@@ -515,6 +517,7 @@ export async function updateIngredient(
   input: {
     ingredient_name?: string;
     category?: string;
+    specification?: string | null;
     unit?: string;
     price?: number | null;
     reorder_point?: number | null;
@@ -537,6 +540,167 @@ export async function updateIngredient(
   }
 
   return { success: true };
+}
+
+// 재료 일괄 추가
+export async function bulkCreateIngredients(
+  ingredients: {
+    ingredient_name: string;
+    category?: string;
+    specification?: string;
+    unit?: string;
+    price?: number;
+    current_qty?: number;
+    reorder_point?: number;
+    safety_stock?: number;
+    branch_id: string;
+  }[],
+): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  if (ingredients.length === 0) {
+    return { success: true, inserted: 0, skipped: 0 };
+  }
+
+  const branchId = ingredients[0].branch_id;
+
+  // 기존 재료명 조회 (중복 체크용)
+  const { data: existingIngredients } = await supabase
+    .from('ingredients')
+    .select('ingredient_name')
+    .eq('branch_id', branchId);
+
+  const existingNames = new Set(
+    (existingIngredients || []).map((i) => i.ingredient_name),
+  );
+
+  // 중복 제외한 새 재료만 필터링
+  const newIngredients = ingredients.filter(
+    (i) => !existingNames.has(i.ingredient_name),
+  );
+
+  const skipped = ingredients.length - newIngredients.length;
+
+  if (newIngredients.length === 0) {
+    return { success: true, inserted: 0, skipped };
+  }
+
+  // 배치 삽입 데이터 준비
+  const insertData = newIngredients.map((i) => ({
+    ingredient_id: `ING-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    ingredient_name: i.ingredient_name,
+    category: i.category || null,
+    specification: i.specification || null,
+    unit: i.unit,
+    price: i.price || 0,
+    current_qty: i.current_qty || 0,
+    reorder_point: i.reorder_point ?? null,
+    safety_stock: i.safety_stock || 0,
+    branch_id: i.branch_id,
+  }));
+
+  // 1000개 단위 청크로 삽입
+  const CHUNK_SIZE = 1000;
+  let inserted = 0;
+
+  for (let i = 0; i < insertData.length; i += CHUNK_SIZE) {
+    const chunk = insertData.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from('ingredients').insert(chunk);
+
+    if (error) {
+      console.error('bulkCreateIngredients error:', error);
+      return { success: false, inserted, skipped, error: error.message };
+    }
+
+    inserted += chunk.length;
+  }
+
+  return { success: true, inserted, skipped };
+}
+
+// 메뉴 일괄 생성
+export async function bulkCreateMenus(
+  menus: {
+    menu_name: string;
+    price: number;
+    category_id?: string;
+    category?: string;
+    branch_id: string;
+  }[],
+): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  if (menus.length === 0) {
+    return { success: true, inserted: 0, skipped: 0 };
+  }
+
+  const branchId = menus[0].branch_id;
+
+  // 기존 메뉴명 조회 (중복 체크용)
+  const { data: existingMenus } = await supabase
+    .from('menus')
+    .select('menu_name')
+    .eq('branch_id', branchId);
+
+  const existingNames = new Set(
+    (existingMenus || []).map((m) => m.menu_name),
+  );
+
+  // 중복 제외한 새 메뉴만 필터링
+  const newMenus = menus.filter(
+    (m) => !existingNames.has(m.menu_name),
+  );
+
+  const skipped = menus.length - newMenus.length;
+
+  if (newMenus.length === 0) {
+    return { success: true, inserted: 0, skipped };
+  }
+
+  // 현재 최대 menu_id 조회
+  const { data: maxIdData } = await supabase
+    .from('menus')
+    .select('menu_id')
+    .eq('branch_id', branchId)
+    .order('menu_id', { ascending: false })
+    .limit(1);
+
+  let nextId = 1;
+  if (maxIdData && maxIdData.length > 0) {
+    const lastId = maxIdData[0].menu_id;
+    const match = lastId.match(/M(\d+)/);
+    if (match) {
+      nextId = parseInt(match[1]) + 1;
+    }
+  }
+
+  // 배치 삽입 데이터 준비
+  const insertData = newMenus.map((m, idx) => ({
+    menu_id: `M${String(nextId + idx).padStart(3, '0')}`,
+    menu_name: m.menu_name,
+    price: m.price,
+    category_id: m.category_id || null,
+    category: m.category || null,
+    branch_id: m.branch_id,
+  }));
+
+  // 1000개 단위 청크로 삽입
+  const CHUNK_SIZE = 1000;
+  let inserted = 0;
+
+  for (let i = 0; i < insertData.length; i += CHUNK_SIZE) {
+    const chunk = insertData.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabase.from('menus').insert(chunk);
+
+    if (error) {
+      console.error('bulkCreateMenus error:', error);
+      return { success: false, inserted, skipped, error: error.message };
+    }
+
+    inserted += chunk.length;
+  }
+
+  return { success: true, inserted, skipped };
 }
 
 export async function getAllRecipes() {
@@ -874,16 +1038,16 @@ export async function getStockMovementsSummary(
   movements.forEach((m) => {
     switch (m.movement_type) {
       case 'in':
-        summary.incoming += m.quantity || 0;
+        summary.incoming += 1;
         break;
       case 'out':
-        summary.outgoing += m.quantity || 0;
+        summary.outgoing += 1;
         break;
       case 'waste':
-        summary.waste += m.quantity || 0;
+        summary.waste += 1;
         break;
       case 'adjustment':
-        summary.adjustment += m.quantity || 0;
+        summary.adjustment += 1;
         break;
     }
   });
@@ -953,6 +1117,8 @@ export async function getStockMovementsPaginated(options?: {
     quantity: item.quantity,
     unit_price: item.unit_price,
     total_price: item.total_price,
+    previous_qty: item.previous_qty,
+    resulting_qty: item.resulting_qty,
     reason: item.reason,
     reference_no: item.reference_no,
     supplier: item.supplier,
@@ -976,9 +1142,28 @@ export async function createStockMovement(
 ): Promise<{ success: boolean; data?: StockMovement; error?: string }> {
   const supabase = createServiceRoleClient();
 
+  // 현재 재고 수량 조회
+  const { data: ingredient } = await supabase
+    .from('ingredients')
+    .select('current_qty')
+    .eq('id', input.ingredient_id)
+    .single();
+
+  const previousQty = ingredient?.current_qty || 0;
+
+  // 재고 변화량 계산
+  const quantityChange =
+    input.movement_type === 'in'
+      ? input.quantity
+      : input.movement_type === 'adjustment'
+        ? input.quantity // 조정은 입력값 그대로 (양수면 증가, 음수면 감소)
+        : -input.quantity; // out, waste는 감소
+
+  const resultingQty = previousQty + quantityChange;
+
   // 총 금액 계산
   const totalPrice = input.unit_price
-    ? input.quantity * input.unit_price
+    ? Math.abs(input.quantity) * input.unit_price
     : undefined;
 
   const { data, error } = await supabase
@@ -989,6 +1174,8 @@ export async function createStockMovement(
       quantity: input.quantity,
       unit_price: input.unit_price,
       total_price: totalPrice,
+      previous_qty: previousQty,
+      resulting_qty: resultingQty,
       reason: input.reason,
       reference_no: input.reference_no,
       supplier: input.supplier,
@@ -1003,13 +1190,6 @@ export async function createStockMovement(
   }
 
   // 재고 수량 업데이트
-  const quantityChange =
-    input.movement_type === 'in'
-      ? input.quantity
-      : input.movement_type === 'adjustment'
-        ? input.quantity // 조정은 입력값 그대로 (양수면 증가, 음수면 감소)
-        : -input.quantity; // out, waste는 감소
-
   const { error: updateError } = await supabase.rpc('update_ingredient_stock', {
     p_ingredient_id: input.ingredient_id,
     p_quantity_change: quantityChange,
@@ -1018,21 +1198,13 @@ export async function createStockMovement(
   // RPC가 없으면 직접 업데이트
   if (updateError) {
     console.log('RPC not available, updating directly');
-    const { data: ingredient } = await supabase
+    await supabase
       .from('ingredients')
-      .select('current_qty')
-      .eq('id', input.ingredient_id)
-      .single();
-
-    if (ingredient) {
-      await supabase
-        .from('ingredients')
-        .update({
-          current_qty: (ingredient.current_qty || 0) + quantityChange,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', input.ingredient_id);
-    }
+      .update({
+        current_qty: resultingQty,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', input.ingredient_id);
   }
 
   return { success: true, data };
@@ -1151,7 +1323,7 @@ export async function getBusinessSettings(): Promise<BusinessSettings | null> {
     .single();
 
   if (error) {
-    console.error('getBusinessSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1181,7 +1353,7 @@ export async function getInventorySettings(): Promise<InventorySettings | null> 
     .single();
 
   if (error) {
-    console.error('getInventorySettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1211,7 +1383,7 @@ export async function getRecipeSettings(): Promise<RecipeSettings | null> {
     .single();
 
   if (error) {
-    console.error('getRecipeSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1241,7 +1413,7 @@ export async function getReportSettings(): Promise<ReportSettings | null> {
     .single();
 
   if (error) {
-    console.error('getReportSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1271,7 +1443,7 @@ export async function getNotificationSettings(): Promise<NotificationSettings | 
     .single();
 
   if (error) {
-    console.error('getNotificationSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1301,7 +1473,7 @@ export async function getSystemSettings(): Promise<SystemSettings | null> {
     .single();
 
   if (error) {
-    console.error('getSystemSettings error:', error);
+    // 테이블이 없을 수 있음 - 무시
     return null;
   }
   return data;
@@ -1368,19 +1540,20 @@ export async function deleteUserPermission(userId: string): Promise<boolean> {
 
 // 모든 설정 한번에 가져오기
 export async function getAllSettings() {
-  const [business, inventory, recipe, report, notification, system, users] =
+  // 각 함수 호출 시 에러가 나면 null 반환 (테이블이 없을 수 있음)
+  const safeCall = <T>(fn: () => Promise<T>) => fn().catch(() => null);
+
+  const [inventory, recipe, report, notification, system, users] =
     await Promise.all([
-      getBusinessSettings(),
-      getInventorySettings(),
-      getRecipeSettings(),
-      getReportSettings(),
-      getNotificationSettings(),
-      getSystemSettings(),
-      getUserPermissions(),
+      safeCall(getInventorySettings),
+      safeCall(getRecipeSettings),
+      safeCall(getReportSettings),
+      safeCall(getNotificationSettings),
+      safeCall(getSystemSettings),
+      safeCall(getUserPermissions),
     ]);
 
   return {
-    business,
     inventory,
     recipe,
     report,
@@ -1782,6 +1955,89 @@ export async function getAllMenuOptions(branchId?: string) {
   return data || [];
 }
 
+// 옵션 링크 타입
+type OptionLinkItem = {
+  link_id: string;
+  option_id: string;
+  option_name: string;
+  option_category: string;
+  additional_price: number;
+  image_url?: string;
+  is_active: boolean;
+};
+
+// 옵션과 카테고리/메뉴 연결 정보 조회
+export async function getOptionsWithLinks(branchId?: string): Promise<{
+  byCategory: Record<string, OptionLinkItem[]>;
+  byMenu: Record<string, OptionLinkItem[]>;
+}> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('menu_option_links')
+    .select(`
+      id,
+      category_id,
+      menu_id,
+      menu_options (
+        id,
+        option_name,
+        option_category,
+        additional_price,
+        image_url,
+        is_active
+      )
+    `);
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getOptionsWithLinks error:', error);
+    return { byCategory: {}, byMenu: {} };
+  }
+
+  const byCategory: Record<string, OptionLinkItem[]> = {};
+  const byMenu: Record<string, OptionLinkItem[]> = {};
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (data || []).forEach((link: any) => {
+    const opt = link.menu_options;
+    if (!opt || !opt.is_active) return;
+
+    const item: OptionLinkItem = {
+      link_id: link.id,
+      option_id: opt.id,
+      option_name: opt.option_name,
+      option_category: opt.option_category,
+      additional_price: opt.additional_price,
+      image_url: opt.image_url,
+      is_active: opt.is_active,
+    };
+
+    // 카테고리에 연결된 옵션
+    if (link.category_id) {
+      if (!byCategory[link.category_id]) {
+        byCategory[link.category_id] = [];
+      }
+      byCategory[link.category_id].push(item);
+    }
+
+    // 메뉴에 연결된 옵션
+    if (link.menu_id) {
+      if (!byMenu[link.menu_id]) {
+        byMenu[link.menu_id] = [];
+      }
+      byMenu[link.menu_id].push(item);
+    }
+  });
+
+  return { byCategory, byMenu };
+}
+
 // ========== 메뉴 카테고리 CRUD 함수들 ==========
 
 import type { MenuCategory, MenuCategoryInput } from '@/types';
@@ -1912,13 +2168,10 @@ export async function deleteMenuCategory(
     }
   }
 
-  // 3. 카테고리 소프트 삭제 (is_active = false)
+  // 3. 카테고리 삭제
   const { error } = await supabase
     .from('menu_categories')
-    .update({
-      is_active: false,
-      updated_at: new Date().toISOString(),
-    })
+    .delete()
     .eq('id', id);
 
   if (error) {

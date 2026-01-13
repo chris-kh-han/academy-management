@@ -101,6 +101,7 @@ type Ingredient = {
   ingredient_id: string;
   ingredient_name: string;
   category: string | null;
+  specification: string | null;
   unit: string;
   current_qty: number;
   reorder_point: number | null;
@@ -127,6 +128,7 @@ export function EditIngredientDialog({
   const [ingredientName, setIngredientName] = React.useState('');
   const [category, setCategory] = React.useState('');
   const [customCategory, setCustomCategory] = React.useState('');
+  const [specification, setSpecification] = React.useState('');
   const [unit, setUnit] = React.useState('');
   const [customUnit, setCustomUnit] = React.useState('');
   const [reorderPoint, setReorderPoint] = React.useState('');
@@ -153,6 +155,9 @@ export function EditIngredientDialog({
         setCategory('');
         setCustomCategory('');
       }
+
+      // 규격 처리
+      setSpecification(ingredient.specification || '');
 
       // 단위 처리
       const u = ingredient.unit || '';
@@ -189,7 +194,7 @@ export function EditIngredientDialog({
     const finalUnit = unit === '기타' ? customUnit.trim() : unit;
 
     if (!trimmedName) {
-      toast.error('재료명을 입력해주세요.');
+      toast.error('품목명을 입력해주세요.');
       return;
     }
 
@@ -214,6 +219,7 @@ export function EditIngredientDialog({
       const result = await updateIngredientAction(ingredient.id, {
         ingredient_name: trimmedName,
         category: finalCategory,
+        specification: specification.trim() || null,
         unit: finalUnit,
         reorder_point: reorderPoint ? Number(reorderPoint) : null,
         safety_stock: safetyStock ? Number(safetyStock) : null,
@@ -248,10 +254,10 @@ export function EditIngredientDialog({
             <DialogDescription>재료 정보를 수정합니다.</DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
-            {/* 재료명 */}
+            {/* 품목명 */}
             <div className='grid grid-cols-4 items-center gap-4'>
               <Label htmlFor='edit-ingredientName' className='text-right'>
-                재료명 *
+                품목명 *
               </Label>
               <Input
                 id='edit-ingredientName'
@@ -308,6 +314,20 @@ export function EditIngredientDialog({
                   />
                 )}
               </div>
+            </div>
+
+            {/* 규격 */}
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='edit-specification' className='text-right'>
+                규격
+              </Label>
+              <Input
+                id='edit-specification'
+                className='col-span-3 placeholder:text-gray-400'
+                value={specification}
+                onChange={(e) => setSpecification(e.target.value)}
+                placeholder='예: 1kg*10pk, 500g*8pk'
+              />
             </div>
 
             {/* 단위 */}

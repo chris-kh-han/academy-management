@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
       });
 
       if (response.ok) {
-        alert('저장되었습니다.');
+        toast.success('저장되었습니다.');
         // 테마 변경 시 즉시 적용
         if (settings.theme === 'dark') {
           document.documentElement.classList.add('dark');
@@ -95,11 +96,11 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
           }
         }
       } else {
-        alert('저장에 실패했습니다.');
+        toast.error('저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -115,7 +116,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="theme">테마</Label>
+              <Label htmlFor="theme" className="text-xs text-muted-foreground">테마</Label>
               <Select
                 value={settings.theme}
                 onValueChange={(value) => handleChange('theme', value as SystemSettings['theme'])}
@@ -133,7 +134,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="language">언어</Label>
+              <Label htmlFor="language" className="text-xs text-muted-foreground">언어</Label>
               <Select
                 value={settings.language}
                 onValueChange={(value) => handleChange('language', value as SystemSettings['language'])}
@@ -151,7 +152,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="items_per_page">페이지당 항목 수</Label>
+              <Label htmlFor="items_per_page" className="text-xs text-muted-foreground">페이지당 항목 수</Label>
               <Select
                 value={settings.items_per_page.toString()}
                 onValueChange={(value) => handleChange('items_per_page', parseInt(value))}
@@ -169,7 +170,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">통화</Label>
+              <Label htmlFor="currency" className="text-xs text-muted-foreground">통화</Label>
               <Select
                 value={settings.currency}
                 onValueChange={(value) => handleChange('currency', value)}
@@ -187,7 +188,7 @@ export default function SystemSettingsForm({ initialData }: SystemSettingsFormPr
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="timezone">시간대</Label>
+              <Label htmlFor="timezone" className="text-xs text-muted-foreground">시간대</Label>
               <Select
                 value={settings.timezone}
                 onValueChange={(value) => handleChange('timezone', value)}

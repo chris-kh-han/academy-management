@@ -30,6 +30,7 @@ type IngredientOption = {
   id: string;
   name: string;
   unit: string;
+  current_qty: number;
 };
 
 type MovementFormDialogProps = {
@@ -77,6 +78,7 @@ export function MovementFormDialog({
     reference_no: '',
     note: '',
   });
+  const [adjustmentSign, setAdjustmentSign] = React.useState<'+' | '-'>('+');
 
   React.useEffect(() => {
     if (open) {
@@ -108,10 +110,17 @@ export function MovementFormDialog({
 
     setLoading(true);
 
+    // 조정 타입일 때 부호 적용
+    const quantity = Number(formData.quantity);
+    const finalQuantity =
+      formData.movement_type === 'adjustment' && adjustmentSign === '-'
+        ? -quantity
+        : quantity;
+
     const input: StockMovementInput = {
       ingredient_id: formData.ingredient_id,
       movement_type: formData.movement_type,
-      quantity: Number(formData.quantity),
+      quantity: finalQuantity,
       unit_price: formData.unit_price ? Number(formData.unit_price) : undefined,
       reason: formData.reason || undefined,
       supplier: formData.supplier || undefined,
@@ -135,6 +144,7 @@ export function MovementFormDialog({
         reference_no: '',
         note: '',
       });
+      setAdjustmentSign('+');
       router.refresh();
     } else {
       setError(result.error || '등록에 실패했습니다.');
@@ -204,26 +214,33 @@ export function MovementFormDialog({
               <Label htmlFor='ingredient' className='text-right'>
                 재료 *
               </Label>
-              <Select
-                value={formData.ingredient_id || ''}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, ingredient_id: value })
-                }
-              >
-                <SelectTrigger className='col-span-3'>
-                  <SelectValue placeholder='재료 선택' />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredients.map((ingredient) => (
-                    <SelectItem
-                      key={ingredient.id}
-                      value={ingredient.id.toString()}
-                    >
-                      {ingredient.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className='col-span-3'>
+                <Select
+                  value={formData.ingredient_id || ''}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, ingredient_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='재료 선택' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredients.map((ingredient) => (
+                      <SelectItem
+                        key={ingredient.id}
+                        value={ingredient.id.toString()}
+                      >
+                        {ingredient.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedIngredient && (
+                  <p className='text-xs text-muted-foreground mt-1'>
+                    현재 재고: {selectedIngredient.current_qty} {selectedIngredient.unit}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className='grid grid-cols-4 items-center gap-4'>
@@ -231,6 +248,32 @@ export function MovementFormDialog({
                 수량 *
               </Label>
               <div className='col-span-3 flex gap-2 items-center'>
+                {formData.movement_type === 'adjustment' && (
+                  <div className='flex rounded-md border'>
+                    <button
+                      type='button'
+                      onClick={() => setAdjustmentSign('+')}
+                      className={`px-3 py-2 text-sm font-medium rounded-l-md ${
+                        adjustmentSign === '+'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      +
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setAdjustmentSign('-')}
+                      className={`px-3 py-2 text-sm font-medium rounded-r-md border-l ${
+                        adjustmentSign === '-'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      −
+                    </button>
+                  </div>
+                )}
                 <Input
                   id='quantity'
                   type='number'

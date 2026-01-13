@@ -10,7 +10,7 @@ const BUCKET_NAME = 'menu-images';
  */
 export async function uploadMenuImage(
   file: File,
-  folder: 'menus' | 'options'
+  folder: 'menus' | 'options' | 'logos'
 ): Promise<string | null> {
   try {
     const supabase = createClient();

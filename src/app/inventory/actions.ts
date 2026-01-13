@@ -6,6 +6,7 @@ import {
   deleteStockMovement,
   createIngredient,
   updateIngredient,
+  bulkCreateIngredients,
 } from '@/utils/supabase/supabase';
 import { revalidatePath } from 'next/cache';
 import type { StockMovementInput } from '@/types';
@@ -32,7 +33,8 @@ export async function deleteMovementAction(id: number) {
 export async function createIngredientAction(input: {
   ingredient_name: string;
   category?: string;
-  unit: string;
+  specification?: string;
+  unit?: string;
   price?: number;
   current_qty?: number;
   reorder_point?: number;
@@ -54,6 +56,7 @@ export async function updateIngredientAction(
   input: {
     ingredient_name?: string;
     category?: string;
+    specification?: string | null;
     unit?: string;
     price?: number | null;
     reorder_point?: number | null;
@@ -63,6 +66,29 @@ export async function updateIngredientAction(
   const result = await updateIngredient(id, input);
 
   if (result.success) {
+    revalidatePath('/inventory');
+  }
+
+  return result;
+}
+
+// 재료 일괄 업로드 액션
+export async function uploadIngredientsAction(
+  ingredients: {
+    ingredient_name: string;
+    category?: string;
+    specification?: string;
+    unit?: string;
+    price?: number;
+    current_qty?: number;
+    reorder_point?: number;
+    safety_stock?: number;
+    branch_id: string;
+  }[],
+) {
+  const result = await bulkCreateIngredients(ingredients);
+
+  if (result.success && result.inserted > 0) {
     revalidatePath('/inventory');
   }
 

@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'react-toastify';
 import { updateMenuOption } from '../_actions/updateMenuOption';
 import { ImageUpload } from '@/components/ImageUpload';
 
@@ -73,13 +74,14 @@ export function EditOptionDialog({
     try {
       const result = await updateMenuOption(option.option_id, formData);
       if (result.success) {
+        toast.success('저장되었습니다.');
         onOpenChange(false);
       } else {
-        alert('저장 실패: ' + result.error);
+        toast.error('저장 실패: ' + result.error);
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      toast.error('저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { UserPermission, UserRole } from '@/types';
 
 interface UserPermissionsFormProps {
@@ -79,6 +90,8 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserPermission | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [newUser, setNewUser] = useState<Partial<UserPermission>>({
     user_email: '',
@@ -98,7 +111,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
 
   const handleAddUser = async () => {
     if (!newUser.user_email || !newUser.user_name) {
-      alert('이메일과 이름을 입력해주세요.');
+      toast.error('이메일과 이름을 입력해주세요.');
       return;
     }
 
@@ -123,13 +136,13 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
           ...defaultPermissionsByRole['staff'],
         });
         setIsDialogOpen(false);
-        alert('사용자가 추가되었습니다.');
+        toast.success('사용자가 추가되었습니다.');
       } else {
-        alert('사용자 추가에 실패했습니다.');
+        toast.error('사용자 추가에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error adding user:', error);
-      alert('사용자 추가 중 오류가 발생했습니다.');
+      toast.error('사용자 추가 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -149,35 +162,39 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
       if (response.ok) {
         setUsers(users.map(u => u.user_id === editingUser.user_id ? editingUser : u));
         setEditingUser(null);
-        alert('권한이 수정되었습니다.');
+        toast.success('권한이 수정되었습니다.');
       } else {
-        alert('권한 수정에 실패했습니다.');
+        toast.error('권한 수정에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('권한 수정 중 오류가 발생했습니다.');
+      toast.error('권한 수정 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('정말 이 사용자를 삭제하시겠습니까?')) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteUserId) return;
 
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/settings/users?userId=${userId}`, {
+      const response = await fetch(`/api/settings/users?userId=${deleteUserId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        setUsers(users.filter(u => u.user_id !== userId));
-        alert('사용자가 삭제되었습니다.');
+        setUsers(users.filter(u => u.user_id !== deleteUserId));
+        toast.success('사용자가 삭제되었습니다.');
       } else {
-        alert('사용자 삭제에 실패했습니다.');
+        toast.error('사용자 삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('사용자 삭제 중 오류가 발생했습니다.');
+      toast.error('사용자 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteUserId(null);
     }
   };
 
@@ -206,7 +223,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_name">이름</Label>
+                  <Label htmlFor="new_user_name" className="text-xs text-muted-foreground">이름</Label>
                   <Input
                     id="new_user_name"
                     value={newUser.user_name || ''}
@@ -215,7 +232,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_email">이메일</Label>
+                  <Label htmlFor="new_user_email" className="text-xs text-muted-foreground">이메일</Label>
                   <Input
                     id="new_user_email"
                     type="email"
@@ -225,7 +242,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new_user_role">역할</Label>
+                  <Label htmlFor="new_user_role" className="text-xs text-muted-foreground">역할</Label>
                   <Select
                     value={newUser.role}
                     onValueChange={(value) => handleRoleChange(value as UserRole)}
@@ -314,7 +331,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => handleDeleteUser(user.user_id)}
+                        onClick={() => setDeleteUserId(user.user_id)}
                       >
                         삭제
                       </Button>
@@ -338,7 +355,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
             {editingUser && (
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>역할</Label>
+                  <Label className="text-xs text-muted-foreground">역할</Label>
                   <Select
                     value={editingUser.role}
                     onValueChange={(value) => handleRoleChange(value as UserRole)}
@@ -356,7 +373,7 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
                   </Select>
                 </div>
                 <div className="space-y-3">
-                  <Label>세부 권한</Label>
+                  <Label className="text-xs text-muted-foreground">세부 권한</Label>
                   <div className="space-y-2">
                     {[
                       { key: 'can_access_dashboard', label: '대시보드' },
@@ -389,6 +406,28 @@ export default function UserPermissionsForm({ initialData }: UserPermissionsForm
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>사용자 삭제</AlertDialogTitle>
+              <AlertDialogDescription>
+                이 사용자를 삭제하시겠습니까? 삭제된 사용자는 복구할 수 없습니다.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="bg-destructive text-white hover:bg-destructive/90"
+              >
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

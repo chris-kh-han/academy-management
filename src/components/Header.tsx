@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, LogOut } from 'lucide-react';
 
@@ -39,16 +38,15 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { label: '대시보드', path: '/dashboard' },
   { label: '재고 관리', path: '/inventory' },
-  { label: '입고/출고 관리', path: '/movements' },
   { label: '메뉴/레서피', path: '/recipes' },
+  { label: '판매 관리', path: '/sales' },
   { label: '리포트', path: '/reports' },
   { label: '설정', path: '/settings' },
-  { label: '초기 설정', path: '/setup', adminOnly: true },
 ];
 
 export default function Header() {
   const pathname = usePathname();
-  const { userRole } = useBranch();
+  const { userRole, currentBrand } = useBranch();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -68,7 +66,17 @@ export default function Header() {
     <header className='h-16 border-b border-border bg-background flex items-center justify-between px-4 shrink-0'>
       <div className='flex items-center gap-4'>
         <Link href='/' className='flex items-center gap-2'>
-          <Image src='/next.svg' alt='logo' width={100} height={24} />
+          {currentBrand?.logo_url ? (
+            <img
+              src={currentBrand.logo_url}
+              alt='logo'
+              className='h-8 max-w-[120px] object-contain'
+            />
+          ) : (
+            <span className='text-lg font-semibold'>
+              {currentBrand?.name || 'My Business'}
+            </span>
+          )}
         </Link>
         {/* 지점 선택기 */}
         <div className='hidden sm:block border-l pl-4'>
