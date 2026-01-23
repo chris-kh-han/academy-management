@@ -70,10 +70,10 @@ export default function OnboardingPage() {
     };
   }, [emblaApi, onSelect]);
 
-  // 브랜드가 있으면 대시보드로 리다이렉트
+  // 브랜드가 있으면 재고 현황으로 리다이렉트
   useEffect(() => {
     if (isInitialized && currentBrand) {
-      router.push('/dashboard');
+      router.push('/inventory');
     }
   }, [isInitialized, currentBrand, router]);
 
@@ -139,7 +139,7 @@ export default function OnboardingPage() {
       setTimeout(async () => {
         await refreshContext();
         router.refresh();
-        router.push('/dashboard');
+        router.push('/inventory');
       }, 1500);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : '생성 실패');
@@ -375,7 +375,7 @@ export default function OnboardingPage() {
               <Check className='h-8 w-8 text-white' />
             </div>
             <h2 className='text-2xl font-bold text-white mb-2'>설정 완료!</h2>
-            <p className='text-white/80'>잠시 후 대시보드로 이동합니다...</p>
+            <p className='text-white/80'>잠시 후 재고 현황으로 이동합니다...</p>
             <Loader2 className='h-5 w-5 animate-spin mt-4 text-white/80' />
           </div>
         </LiquidGlassCard>

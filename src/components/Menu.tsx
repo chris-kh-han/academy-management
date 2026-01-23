@@ -8,12 +8,8 @@ type MenuItem = {
 };
 
 const menuType: MenuItem[] = [
-  { label: '대시보드', path: '/dashboard' },
-  { label: '재고 관리', path: '/inventory' },
-  { label: '입고/출고 관리', path: '/stock' },
-  { label: '메뉴/레서피', path: '/recipes' },
-  { label: '근태 관리', path: '/attendance' },
-  { label: '급여 관리', path: '/payroll' },
+  { label: '재고 현황', path: '/inventory' },
+  { label: '마감 체크', path: '/closing' },
   { label: '리포트', path: '/reports' },
   { label: '설정', path: '/settings' },
 ];
