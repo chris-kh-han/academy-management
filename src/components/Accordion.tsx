@@ -8,7 +8,7 @@ import {
 export function AccordionDemo() {
   return (
     <Accordion
-      type='single'
+                                  type='single'
       collapsible
       className='w-full'
       //   defaultValue='item-1'

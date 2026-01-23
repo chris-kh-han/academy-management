@@ -136,7 +136,9 @@ export function MenuUploadDialog({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `메뉴_템플릿_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.download = `메뉴_템플릿_${
+      new Date().toISOString().split('T')[0]
+    }.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -150,38 +152,38 @@ export function MenuUploadDialog({
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const parsed: ParsedMenu[] = (results.data as Record<string, string>[]).map(
-          (row) => {
-            const menu: ParsedMenu = {
-              menu_name: '',
-              price: 0,
-              category_name: '',
-              isValid: true,
-            };
+        const parsed: ParsedMenu[] = (
+          results.data as Record<string, string>[]
+        ).map((row) => {
+          const menu: ParsedMenu = {
+            menu_name: '',
+            price: 0,
+            category_name: '',
+            isValid: true,
+          };
 
-            // 헤더 매핑
-            Object.entries(HEADER_MAP).forEach(([csvHeader, field]) => {
-              const value = row[csvHeader]?.trim() || '';
-              if (field === 'price') {
-                const num = parseFloat(value);
-                menu.price = isNaN(num) ? 0 : num;
-              } else {
-                (menu[field] as string) = value;
-              }
-            });
-
-            // 유효성 검사 (메뉴명, 가격 필수)
-            if (!menu.menu_name) {
-              menu.isValid = false;
-              menu.error = '메뉴명 필수';
-            } else if (menu.price <= 0) {
-              menu.isValid = false;
-              menu.error = '가격 필수';
+          // 헤더 매핑
+          Object.entries(HEADER_MAP).forEach(([csvHeader, field]) => {
+            const value = row[csvHeader]?.trim() || '';
+            if (field === 'price') {
+              const num = parseFloat(value);
+              menu.price = isNaN(num) ? 0 : num;
+            } else {
+              (menu[field] as string) = value;
             }
+          });
 
-            return menu;
-          },
-        );
+          // 유효성 검사 (메뉴명, 가격 필수)
+          if (!menu.menu_name) {
+            menu.isValid = false;
+            menu.error = '메뉴명 필수';
+          } else if (menu.price <= 0) {
+            menu.isValid = false;
+            menu.error = '가격 필수';
+          }
+
+          return menu;
+        });
 
         setParsedData(parsed);
         setIsLoading(false);
@@ -263,7 +265,11 @@ export function MenuUploadDialog({
 
       setParsedData(parsed);
     } catch (error) {
-      toast.error(`파일 파싱 오류: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+      toast.error(
+        `파일 파싱 오류: ${
+          error instanceof Error ? error.message : '알 수 없는 오류'
+        }`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -332,7 +338,10 @@ export function MenuUploadDialog({
       ...new Set(
         validData
           .map((d) => d.category_name)
-          .filter((name): name is string => !!name && !existingCategoryNames.has(name))
+          .filter(
+            (name): name is string =>
+              !!name && !existingCategoryNames.has(name),
+          ),
       ),
     ];
 
@@ -359,7 +368,9 @@ export function MenuUploadDialog({
     const menus = validData.map((d) => ({
       menu_name: d.menu_name,
       price: d.price,
-      category_id: d.category_name ? categoryMap.get(d.category_name) : undefined,
+      category_id: d.category_name
+        ? categoryMap.get(d.category_name)
+        : undefined,
       category: d.category_name || undefined,
       branch_id: currentBranch.id,
     }));
@@ -370,7 +381,9 @@ export function MenuUploadDialog({
 
     if (result.success) {
       toast.success(
-        `${result.inserted}개 추가 완료${result.skipped > 0 ? `, ${result.skipped}개 중복 건너뜀` : ''}`,
+        `${result.inserted}개 추가 완료${
+          result.skipped > 0 ? `, ${result.skipped}개 중복 건너뜀` : ''
+        }`,
       );
       onOpenChange(false);
     } else {
@@ -387,8 +400,8 @@ export function MenuUploadDialog({
         <DialogHeader>
           <DialogTitle>메뉴 일괄 업로드</DialogTitle>
           <DialogDescription>
-            CSV 또는 Excel 파일로 여러 메뉴를 한 번에 추가합니다. 중복된 메뉴명은 자동으로
-            건너뜁니다.
+            CSV 또는 Excel 파일로 여러 메뉴를 한 번에 추가합니다. 중복된
+            메뉴명은 자동으로 건너뜁니다.
           </DialogDescription>
         </DialogHeader>
 
@@ -476,7 +489,9 @@ export function MenuUploadDialog({
                   <span className='text-sm text-muted-foreground'>
                     총 {parsedData.length}행 (유효: {validCount}
                     {invalidCount > 0 && (
-                      <span className='text-red-500'>, 오류: {invalidCount}</span>
+                      <span className='text-red-500'>
+                        , 오류: {invalidCount}
+                      </span>
                     )}
                     )
                   </span>
