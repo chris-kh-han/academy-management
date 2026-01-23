@@ -2299,3 +2299,588 @@ export async function getMenusForTemplate(branchId: string) {
 
   return data || [];
 }
+
+// ========== 마감 체크 (Daily Closing) 함수들 ==========
+
+import type {
+  DailyClosing,
+  DailyClosingItem,
+  DailyClosingItemInput,
+  CalculationMethod,
+  OrderRecommendation,
+  OrderRecommendationItem,
+} from '@/types';
+
+/**
+ * 특정 날짜의 마감 기록 조회
+ */
+export async function getDailyClosing(
+  branchId: string,
+  date: string,
+): Promise<DailyClosing | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('daily_closings')
+    .select(
+      `
+      *,
+      daily_closing_items (
+        *,
+        ingredients (
+          ingredient_name,
+          unit,
+          category
+        )
+      )
+    `,
+    )
+    .eq('branch_id', branchId)
+    .eq('closing_date', date)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getDailyClosing error:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  // 데이터 매핑
+  return {
+    ...data,
+    items: data.daily_closing_items?.map((item: DailyClosingItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+      ...item,
+      ingredient_name: item.ingredients?.ingredient_name,
+      unit: item.ingredients?.unit,
+      category: item.ingredients?.category,
+    })),
+  };
+}
+
+/**
+ * 마감 기록 생성
+ */
+export async function createDailyClosing(input: {
+  branch_id: string;
+  closing_date: string;
+}): Promise<{ success: boolean; data?: DailyClosing; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 중복 체크
+  const { data: existing } = await supabase
+    .from('daily_closings')
+    .select('id')
+    .eq('branch_id', input.branch_id)
+    .eq('closing_date', input.closing_date)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: '해당 날짜의 마감 기록이 이미 존재합니다.' };
+  }
+
+  const { data, error } = await supabase
+    .from('daily_closings')
+    .insert({
+      branch_id: input.branch_id,
+      closing_date: input.closing_date,
+      status: 'draft',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('createDailyClosing error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data };
+}
+
+/**
+ * 마감 아이템 저장/수정 (upsert)
+ */
+export async function saveClosingItem(
+  closingId: string,
+  item: DailyClosingItemInput,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // closing_qty 계산
+  const closingQty =
+    item.opening_qty - item.used_qty - (item.waste_qty || 0);
+
+  const { error } = await supabase.from('daily_closing_items').upsert(
+    {
+      closing_id: closingId,
+      ingredient_id: item.ingredient_id,
+      opening_qty: item.opening_qty,
+      used_qty: item.used_qty,
+      waste_qty: item.waste_qty || 0,
+      closing_qty: closingQty,
+      note: item.note,
+    },
+    {
+      onConflict: 'closing_id,ingredient_id',
+    },
+  );
+
+  if (error) {
+    console.error('saveClosingItem error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 마감 아이템 일괄 저장 (Excel 업로드용)
+ */
+export async function bulkSaveClosingItems(
+  closingId: string,
+  items: DailyClosingItemInput[],
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 각 아이템의 closing_qty 계산 후 upsert용 데이터 생성
+  const upsertData = items.map((item) => ({
+    closing_id: closingId,
+    ingredient_id: item.ingredient_id,
+    opening_qty: item.opening_qty,
+    used_qty: item.used_qty,
+    waste_qty: item.waste_qty || 0,
+    closing_qty: item.opening_qty - item.used_qty - (item.waste_qty || 0),
+    note: item.note,
+  }));
+
+  const { error } = await supabase
+    .from('daily_closing_items')
+    .upsert(upsertData, {
+      onConflict: 'closing_id,ingredient_id',
+    });
+
+  if (error) {
+    console.error('bulkSaveClosingItems error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, count: items.length };
+}
+
+/**
+ * 마감 완료 처리
+ * - status를 completed로 변경
+ * - stock_movements에 'out' 기록 생성
+ * - ingredients.current_qty 업데이트
+ */
+export async function completeClosing(
+  closingId: string,
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 1. 마감 기록 조회
+  const { data: closing, error: closingError } = await supabase
+    .from('daily_closings')
+    .select('*, daily_closing_items(*)')
+    .eq('id', closingId)
+    .single();
+
+  if (closingError || !closing) {
+    return { success: false, error: '마감 기록을 찾을 수 없습니다.' };
+  }
+
+  if (closing.status === 'completed') {
+    return { success: false, error: '이미 완료된 마감입니다.' };
+  }
+
+  // 2. 각 아이템에 대해 stock_movements 생성 및 재고 업데이트
+  const items = closing.daily_closing_items || [];
+
+  for (const item of items) {
+    // 사용량이 있는 경우만 처리
+    if (item.used_qty > 0) {
+      // 재고 이동 기록 (출고)
+      await supabase.from('stock_movements').insert({
+        ingredient_id: item.ingredient_id,
+        movement_type: 'out',
+        quantity: item.used_qty,
+        previous_qty: item.opening_qty,
+        resulting_qty: item.closing_qty,
+        reason: `마감 사용량 (${closing.closing_date})`,
+        branch_id: closing.branch_id,
+      });
+
+      // 재고 업데이트
+      await supabase
+        .from('ingredients')
+        .update({
+          current_qty: item.closing_qty,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', item.ingredient_id);
+    }
+
+    // 폐기량이 있는 경우
+    if (item.waste_qty > 0) {
+      await supabase.from('stock_movements').insert({
+        ingredient_id: item.ingredient_id,
+        movement_type: 'waste',
+        quantity: item.waste_qty,
+        reason: `마감 폐기 (${closing.closing_date})`,
+        branch_id: closing.branch_id,
+      });
+    }
+  }
+
+  // 3. 마감 상태 업데이트
+  const { error: updateError } = await supabase
+    .from('daily_closings')
+    .update({
+      status: 'completed',
+      closed_by: userId,
+      closed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', closingId);
+
+  if (updateError) {
+    console.error('completeClosing update error:', updateError);
+    return { success: false, error: updateError.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 마감 이력 조회
+ */
+export async function getDailyClosingHistory(
+  branchId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<DailyClosing[]> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('daily_closings')
+    .select('*')
+    .eq('branch_id', branchId)
+    .order('closing_date', { ascending: false });
+
+  if (startDate) {
+    query = query.gte('closing_date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('closing_date', endDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getDailyClosingHistory error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * 재료별 모든 재고 정보 조회 (마감 체크용)
+ */
+export async function getIngredientsForClosing(branchId: string) {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('ingredients')
+    .select('id, ingredient_name, category, unit, current_qty, target_stock')
+    .eq('branch_id', branchId)
+    .order('category', { ascending: true })
+    .order('ingredient_name', { ascending: true });
+
+  if (error) {
+    console.error('getIngredientsForClosing error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// ========== 발주 추천 (Order Recommendation) 함수들 ==========
+
+/**
+ * 발주 추천 생성
+ * method: 'target' - 목표 재고 기준
+ * method: 'average' - 일평균 사용량 기준
+ */
+export async function generateOrderRecommendations(
+  branchId: string,
+  method: CalculationMethod,
+  options?: { orderPeriodDays?: number; avgDays?: number },
+): Promise<{ success: boolean; data?: OrderRecommendation; error?: string }> {
+  const supabase = createServiceRoleClient();
+  const today = getToday();
+  const orderPeriodDays = options?.orderPeriodDays || 7;
+  const avgDays = options?.avgDays || 14;
+
+  // 1. 재료 목록 조회
+  const { data: ingredients, error: ingredientError } = await supabase
+    .from('ingredients')
+    .select('id, ingredient_name, category, unit, current_qty, target_stock')
+    .eq('branch_id', branchId);
+
+  if (ingredientError || !ingredients) {
+    return { success: false, error: '재료 목록을 조회할 수 없습니다.' };
+  }
+
+  // 2. 일평균 사용량 계산 (average 방식일 때)
+  const avgUsageMap: Record<string, number> = {};
+  if (method === 'average') {
+    const startDate = getDaysAgo(avgDays);
+    const { data: closingItems } = await supabase
+      .from('daily_closing_items')
+      .select('ingredient_id, used_qty, daily_closings!inner(closing_date, branch_id)')
+      .gte('daily_closings.closing_date', startDate)
+      .eq('daily_closings.branch_id', branchId);
+
+    if (closingItems) {
+      // 재료별 총 사용량 합계
+      const usageTotals: Record<string, number> = {};
+      closingItems.forEach((item) => {
+        const id = item.ingredient_id;
+        usageTotals[id] = (usageTotals[id] || 0) + (item.used_qty || 0);
+      });
+
+      // 일평균으로 변환
+      Object.keys(usageTotals).forEach((id) => {
+        avgUsageMap[id] = usageTotals[id] / avgDays;
+      });
+    }
+  }
+
+  // 3. 발주 추천 헤더 생성
+  const { data: recommendation, error: recError } = await supabase
+    .from('order_recommendations')
+    .insert({
+      branch_id: branchId,
+      recommendation_date: today,
+      calculation_method: method,
+      order_period_days: orderPeriodDays,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (recError || !recommendation) {
+    return { success: false, error: '발주 추천 생성 실패' };
+  }
+
+  // 4. 발주 추천 아이템 생성
+  const items: Omit<OrderRecommendationItem, 'id' | 'created_at'>[] = [];
+
+  ingredients.forEach((ing) => {
+    const currentQty = ing.current_qty || 0;
+    let recommendedQty = 0;
+
+    if (method === 'target') {
+      // 목표 재고 기준: (목표 - 현재)
+      const targetStock = ing.target_stock || 0;
+      recommendedQty = Math.max(0, targetStock - currentQty);
+    } else {
+      // 일평균 사용량 기준: (일평균 × 기간 × 1.2) - 현재
+      const avgUsage = avgUsageMap[ing.id] || 0;
+      const neededQty = avgUsage * orderPeriodDays * 1.2;
+      recommendedQty = Math.max(0, Math.ceil(neededQty - currentQty));
+    }
+
+    // 발주량이 있는 경우만 추가
+    if (recommendedQty > 0) {
+      items.push({
+        recommendation_id: recommendation.id,
+        ingredient_id: ing.id,
+        current_qty: currentQty,
+        target_qty: method === 'target' ? ing.target_stock : undefined,
+        avg_daily_usage: method === 'average' ? avgUsageMap[ing.id] : undefined,
+        recommended_qty: recommendedQty,
+      });
+    }
+  });
+
+  // 5. 아이템 삽입
+  if (items.length > 0) {
+    const { error: itemsError } = await supabase
+      .from('order_recommendation_items')
+      .insert(items);
+
+    if (itemsError) {
+      console.error('Insert recommendation items error:', itemsError);
+    }
+  }
+
+  // 6. 완성된 추천 데이터 조회
+  const { data: fullData } = await supabase
+    .from('order_recommendations')
+    .select(
+      `
+      *,
+      order_recommendation_items (
+        *,
+        ingredients (ingredient_name, unit, category)
+      )
+    `,
+    )
+    .eq('id', recommendation.id)
+    .single();
+
+  return {
+    success: true,
+    data: fullData
+      ? {
+          ...fullData,
+          items: fullData.order_recommendation_items?.map(
+            (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+              ...item,
+              ingredient_name: item.ingredients?.ingredient_name,
+              unit: item.ingredients?.unit,
+              category: item.ingredients?.category,
+            }),
+          ),
+        }
+      : undefined,
+  };
+}
+
+/**
+ * 발주 추천 목록 조회
+ */
+export async function getOrderRecommendations(
+  branchId: string,
+  limit?: number,
+): Promise<OrderRecommendation[]> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('order_recommendations')
+    .select(
+      `
+      *,
+      order_recommendation_items (
+        *,
+        ingredients (ingredient_name, unit, category)
+      )
+    `,
+    )
+    .eq('branch_id', branchId)
+    .order('created_at', { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getOrderRecommendations error:', error);
+    return [];
+  }
+
+  return (
+    data?.map((rec) => ({
+      ...rec,
+      items: rec.order_recommendation_items?.map(
+        (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+          ...item,
+          ingredient_name: item.ingredients?.ingredient_name,
+          unit: item.ingredients?.unit,
+          category: item.ingredients?.category,
+        }),
+      ),
+    })) || []
+  );
+}
+
+/**
+ * 특정 발주 추천 조회
+ */
+export async function getOrderRecommendation(
+  recommendationId: string,
+): Promise<OrderRecommendation | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('order_recommendations')
+    .select(
+      `
+      *,
+      order_recommendation_items (
+        *,
+        ingredients (ingredient_name, unit, category)
+      )
+    `,
+    )
+    .eq('id', recommendationId)
+    .single();
+
+  if (error) {
+    console.error('getOrderRecommendation error:', error);
+    return null;
+  }
+
+  return {
+    ...data,
+    items: data.order_recommendation_items?.map(
+      (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+        ...item,
+        ingredient_name: item.ingredients?.ingredient_name,
+        unit: item.ingredients?.unit,
+        category: item.ingredients?.category,
+      }),
+    ),
+  };
+}
+
+/**
+ * 발주 추천 아이템의 발주수량 업데이트
+ */
+export async function updateRecommendationItemQty(
+  itemId: string,
+  orderedQty: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('order_recommendation_items')
+    .update({ ordered_qty: orderedQty })
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('updateRecommendationItemQty error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 발주 추천 상태 변경 (발주 완료 처리)
+ */
+export async function markRecommendationAsOrdered(
+  recommendationId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('order_recommendations')
+    .update({
+      status: 'ordered',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', recommendationId);
+
+  if (error) {
+    console.error('markRecommendationAsOrdered error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
