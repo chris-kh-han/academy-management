@@ -8,7 +8,7 @@ export type BranchRole = 'manager' | 'staff' | 'viewer';
 
 // 브랜드 (본사/프랜차이즈)
 export type Brand = {
-  id: string;
+    id: string;
   name: string;
   slug: string;
   description?: string;
@@ -364,4 +364,88 @@ export type Payroll = {
   // joined data
   user_name?: string;
   user_email?: string;
+};
+
+// ========== 마감 체크 관련 타입 ==========
+
+export type ClosingStatus = 'draft' | 'completed';
+
+export type DailyClosing = {
+  id: string;
+  branch_id: string;
+  closing_date: string;
+  status: ClosingStatus;
+  closed_by?: string;
+  closed_at?: string;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  items?: DailyClosingItem[];
+};
+
+export type DailyClosingItem = {
+  id: string;
+  closing_id: string;
+  ingredient_id: string;
+  opening_qty: number;
+  used_qty: number;
+  waste_qty: number;
+  closing_qty: number;
+  note?: string;
+  created_at?: string;
+  // joined data
+  ingredient_name?: string;
+  unit?: string;
+  category?: string;
+};
+
+export type DailyClosingItemInput = {
+  ingredient_id: string;
+  opening_qty: number;
+  used_qty: number;
+  waste_qty?: number;
+  note?: string;
+};
+
+// ========== 발주 추천 관련 타입 ==========
+
+export type CalculationMethod = 'target' | 'average';
+export type RecommendationStatus = 'pending' | 'ordered';
+
+export type OrderRecommendation = {
+  id: string;
+  branch_id: string;
+  recommendation_date: string;
+  calculation_method: CalculationMethod;
+  order_period_days: number;
+  status: RecommendationStatus;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  items?: OrderRecommendationItem[];
+};
+
+export type OrderRecommendationItem = {
+  id: string;
+  recommendation_id: string;
+  ingredient_id: string;
+  current_qty: number;
+  target_qty?: number;
+  avg_daily_usage?: number;
+  recommended_qty: number;
+  ordered_qty?: number;
+  created_at?: string;
+  // joined data
+  ingredient_name?: string;
+  unit?: string;
+  category?: string;
+};
+
+export type GenerateRecommendationInput = {
+  branch_id: string;
+  calculation_method: CalculationMethod;
+  order_period_days?: number;
+  avg_days?: number;
 };

@@ -25,11 +25,12 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type InventoryReportProps = {
   inventory: any[];
   lowStock: any[];
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export default function InventoryReport({
   inventory,

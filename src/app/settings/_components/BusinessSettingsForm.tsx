@@ -126,7 +126,7 @@ export default function BusinessSettingsForm() {
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='business_hours_end' className='text-xs text-muted-foreground'>영업 종료 시간</Label>
+                    <Label htmlFor='business_hours_end' className='text-xs text-muted-foreground'>영업 종료 시간</Label>
               <Input
                 id='business_hours_end'
                 type='time'

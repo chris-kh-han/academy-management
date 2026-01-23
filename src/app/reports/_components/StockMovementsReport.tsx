@@ -29,8 +29,8 @@ import {
   Legend,
 } from 'recharts';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type StockMovementsReportProps = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stockMovements: any[];
   movementsSummary: {
     incoming: number;

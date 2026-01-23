@@ -907,7 +907,7 @@ export function MenuBoard({
                 카테고리가 없습니다
               </h3>
               <p className='text-sm text-gray-500 dark:text-gray-400 mb-4'>
-                카테고리를 먼저 추가한 후, 각 카테고리에 메뉴를 추가하세요.
+                메뉴 또는 카테고리를 추가하세요.
               </p>
               <Button
                 onClick={() => {

@@ -72,11 +72,9 @@ const Recipes = async () => {
   return (
     <div className='px-12 py-8 animate-slide-in-left'>
       <div className='mb-6'>
-        <h1 className='text-3xl font-bold text-slate-800 dark:text-slate-100'>
-          메뉴 관리
-        </h1>
-        <p className='text-slate-600 dark:text-slate-400 mt-1'>
-          카테고리를 먼저 추가한 후, 각 카테고리에 메뉴를 추가하세요.
+        <h1 className='text-2xl font-bold'>메뉴 관리</h1>
+        <p className='text-muted-foreground mt-1 text-sm'>
+          메뉴 또는 카테고리를 추가하세요.
         </p>
       </div>
 
