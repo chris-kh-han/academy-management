@@ -491,6 +491,7 @@ export function IngredientUploadDialog({
                   <Button
                     variant='ghost'
                     size='sm'
+                    aria-label='파일 제거'
                     onClick={() => {
                       setParsedData([]);
                       setFileName(null);

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, Upload, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { IngredientsTable, Ingredient } from './IngredientsTable';
@@ -12,6 +12,7 @@ import { MovementFormDialog } from './MovementFormDialog';
 import { AddIngredientDialog } from './AddIngredientDialog';
 import { EditIngredientDialog } from './EditIngredientDialog';
 import { IngredientUploadDialog } from './IngredientUploadDialog';
+import { InvoiceScanDialog } from './InvoiceScanDialog';
 import type { StockMovement, MovementType } from '@/types';
 
 type InventoryContentProps = {
@@ -43,6 +44,7 @@ export function InventoryContent({
   >(undefined);
   const [addIngredientOpen, setAddIngredientOpen] = React.useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
+  const [invoiceScanOpen, setInvoiceScanOpen] = React.useState(false);
   const [editIngredientOpen, setEditIngredientOpen] = React.useState(false);
   const [editIngredient, setEditIngredient] = React.useState<Ingredient | null>(
     null,
@@ -151,6 +153,14 @@ export function InventoryContent({
             일괄 업로드
           </Button>
           <Button
+            variant='outline'
+            className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
+            onClick={() => setInvoiceScanOpen(true)}
+          >
+            <ScanLine className='mr-2 h-4 w-4' />
+            명세서 스캔
+          </Button>
+          <Button
             className='w-full sm:w-[160px] py-3 sm:py-2 cursor-pointer'
             onClick={() => handleOpenMovementDialog('in')}
           >
@@ -215,6 +225,12 @@ export function InventoryContent({
       <IngredientUploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
+      />
+
+      <InvoiceScanDialog
+        ingredients={ingredientOptions}
+        open={invoiceScanOpen}
+        onOpenChange={setInvoiceScanOpen}
       />
     </div>
   );

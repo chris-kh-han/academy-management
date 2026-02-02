@@ -1,8 +1,20 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import {
+  LogOut,
+  LayoutDashboard,
+  Package,
+  PackagePlus,
+  Warehouse,
+  ShoppingCart,
+  TrendingUp,
+  BarChart3,
+  Settings,
+  ClipboardCheck,
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -30,17 +42,21 @@ type MenuItem = {
   path: string;
   icon?: React.ReactNode;
   adminOnly?: boolean; // owner/admin만 볼 수 있는 메뉴
+  hidden?: boolean; // 숨김 처리
 };
 
 const menuItems: MenuItem[] = [
-  { label: '대시보드', path: '/dashboard' },
-  { label: '재고 관리', path: '/inventory' },
-  { label: '메뉴/레서피', path: '/recipes' },
-  { label: '판매 관리', path: '/sales' },
-  { label: '리포트', path: '/reports' },
-  // { label: '근태 관리', path: '/attendance' },
-  // { label: '급여 관리', path: '/payroll' },
-  { label: '설정', path: '/settings' },
+  { label: '대시보드', path: '/dashboard', icon: <LayoutDashboard className='w-4 h-4' /> },
+  { label: '재고 현황', path: '/inventory', icon: <Package className='w-4 h-4' /> },
+  { label: '재료 관리', path: '/inventory/ingredients', icon: <Warehouse className='w-4 h-4' /> },
+  { label: '입출고 관리', path: '/inventory/movements', icon: <PackagePlus className='w-4 h-4' /> },
+  { label: '마감 체크', path: '/inventory/closing', icon: <ClipboardCheck className='w-4 h-4' /> },
+  { label: '발주 관리', path: '/orders', icon: <ShoppingCart className='w-4 h-4' /> },
+  { label: '재고 예측', path: '/inventory/forecast', icon: <TrendingUp className='w-4 h-4' /> },
+  { label: '판매 기록', path: '/sales', icon: <BarChart3 className='w-4 h-4' /> },
+  { label: '리포트', path: '/reports', icon: <BarChart3 className='w-4 h-4' /> },
+  { label: '메뉴/레시피', path: '/recipes', hidden: true }, // 숨김 처리
+  { label: '설정', path: '/settings', icon: <Settings className='w-4 h-4' /> },
 ];
 
 export default function AppSidebar() {
@@ -51,18 +67,34 @@ export default function AppSidebar() {
   // owner 또는 admin인지 확인
   const isOwnerOrAdmin = userRole === 'owner' || userRole === 'admin';
 
-  // 역할에 따라 메뉴 필터링
+  // 역할에 따라 메뉴 필터링 + 숨김 처리
   const visibleMenus = menuItems.filter((menu) => {
+    if (menu.hidden) return false;
     if (menu.adminOnly && !isOwnerOrAdmin) return false;
     return true;
   });
+
+  // 현재 pathname에 가장 구체적으로 매칭되는 메뉴 찾기
+  const activePath = useMemo(() => {
+    if (!pathname) return null;
+
+    // 정확히 일치하는 경로 우선
+    const exactMatch = visibleMenus.find((m) => m.path === pathname);
+    if (exactMatch) return exactMatch.path;
+
+    // 그 다음, 가장 긴 prefix 매칭 (가장 구체적인 경로)
+    const prefixMatches = visibleMenus
+      .filter((m) => pathname.startsWith(m.path + '/'))
+      .sort((a, b) => b.path.length - a.path.length);
+
+    return prefixMatches[0]?.path || null;
+  }, [pathname, visibleMenus]);
 
   return (
     <Sidebar>
       <SidebarHeader>
         {visibleMenus.map((menu) => {
-          const isActive =
-            pathname === menu.path || pathname?.startsWith(menu.path + '/');
+          const isActive = menu.path === activePath;
           return (
             <Link
               key={menu.path}
@@ -72,13 +104,14 @@ export default function AppSidebar() {
               }}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200',
+                'px-4 py-3 rounded-lg border cursor-pointer transition-colors duration-200 flex items-center gap-2',
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-card text-card-foreground hover:bg-orange-100/50 hover:text-orange-600',
                 'border-border',
               )}
             >
+              {menu.icon}
               {menu.label}
             </Link>
           );

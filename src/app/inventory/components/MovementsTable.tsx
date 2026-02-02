@@ -147,7 +147,7 @@ export function MovementsTable({
         };
         return (
           <span
-            className={`px-2 py-1 rounded text-xs font-medium config.className}`}
+            className={`px-2 py-1 rounded text-xs font-medium ${config.className}`}
           >
             {config.label}
           </span>
@@ -212,7 +212,7 @@ export function MovementsTable({
                 {sign}
                 {quantity}
               </span>
-              <span>{'->'}</span>
+              <span>→</span>
               <span className='ml-1'>{resultingQty}</span>
               <span className='text-muted-foreground ml-1'>{unit}</span>
             </div>

@@ -470,6 +470,11 @@ export async function createIngredient(input: {
   reorder_point?: number;
   safety_stock?: number;
   branch_id: string;
+  // 새로 추가된 필드
+  priority?: 1 | 2 | 3;
+  storage_location?: string;
+  packs_per_box?: number;
+  units_per_pack?: number;
 }): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
   const supabase = createServiceRoleClient();
 
@@ -499,6 +504,11 @@ export async function createIngredient(input: {
       reorder_point: input.reorder_point ?? null,
       safety_stock: input.safety_stock || 0,
       branch_id: input.branch_id,
+      // 새로 추가된 필드
+      priority: input.priority ?? 2,
+      storage_location: input.storage_location || null,
+      packs_per_box: input.packs_per_box ?? null,
+      units_per_pack: input.units_per_pack ?? null,
     })
     .select()
     .single();
@@ -522,6 +532,11 @@ export async function updateIngredient(
     price?: number | null;
     reorder_point?: number | null;
     safety_stock?: number | null;
+    // 새로 추가된 필드
+    priority?: 1 | 2 | 3;
+    storage_location?: string | null;
+    packs_per_box?: number | null;
+    units_per_pack?: number | null;
   },
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceRoleClient();
@@ -1053,6 +1068,24 @@ export async function getStockMovementsSummary(
   });
 
   return summary;
+}
+
+// 오늘 입출고 건수 조회 (server-dedup-props: 전체 movements 대신 COUNT만 조회)
+export async function getTodayMovementsCount(): Promise<number> {
+  const supabase = createServiceRoleClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const { count, error } = await supabase
+    .from('stock_movements')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', today);
+
+  if (error) {
+    console.error('getTodayMovementsCount error:', error);
+    return 0;
+  }
+
+  return count ?? 0;
 }
 
 // ========== 재고 이동 CRUD 함수들 ==========
@@ -2298,4 +2331,351 @@ export async function getMenusForTemplate(branchId: string) {
   }
 
   return data || [];
+}
+
+// ========== 발주 관리 함수들 ==========
+
+import type {
+  PurchaseOrder,
+  PurchaseOrderItem,
+  PurchaseOrderInput,
+  PurchaseOrderStatus,
+} from '@/types';
+
+/**
+ * 발주서 목록 조회
+ */
+export async function getPurchaseOrders(branchId?: string): Promise<PurchaseOrder[]> {
+  const supabase = createServiceRoleClient();
+
+  let query = supabase
+    .from('purchase_orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getPurchaseOrders error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * 발주서 상세 조회 (품목 포함)
+ */
+export async function getPurchaseOrderById(orderId: number): Promise<PurchaseOrder | null> {
+  const supabase = createServiceRoleClient();
+
+  // 발주서 조회
+  const { data: order, error: orderError } = await supabase
+    .from('purchase_orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (orderError || !order) {
+    console.error('getPurchaseOrderById order error:', orderError);
+    return null;
+  }
+
+  // 발주 품목 조회
+  const { data: items, error: itemsError } = await supabase
+    .from('purchase_order_items')
+    .select('*, ingredients(ingredient_name, unit)')
+    .eq('order_id', orderId);
+
+  if (itemsError) {
+    console.error('getPurchaseOrderById items error:', itemsError);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formattedItems: PurchaseOrderItem[] = (items || []).map((item: any) => ({
+    ...item,
+    ingredient_name: item.ingredients?.ingredient_name,
+    ingredient_unit: item.ingredients?.unit,
+  }));
+
+  return {
+    ...order,
+    items: formattedItems,
+  };
+}
+
+/**
+ * 발주서 생성
+ */
+export async function createPurchaseOrder(
+  input: PurchaseOrderInput,
+): Promise<{ success: boolean; data?: PurchaseOrder; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 발주번호 생성 (PO-YYYYMMDD-XXX)
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+
+  // 오늘 생성된 발주서 수 조회
+  const { count } = await supabase
+    .from('purchase_orders')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', `${today.toISOString().split('T')[0]}T00:00:00`)
+    .lte('created_at', `${today.toISOString().split('T')[0]}T23:59:59`);
+
+  const orderNumber = `PO-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
+
+  // 총액 계산
+  const totalAmount = input.items.reduce(
+    (sum, item) => sum + item.quantity * (item.unit_price || 0),
+    0,
+  );
+
+  // 발주서 생성
+  const { data: order, error: orderError } = await supabase
+    .from('purchase_orders')
+    .insert({
+      order_number: orderNumber,
+      supplier: input.supplier,
+      expected_date: input.expected_date,
+      notes: input.notes,
+      branch_id: input.branch_id,
+      total_amount: totalAmount,
+      status: 'draft',
+    })
+    .select()
+    .single();
+
+  if (orderError || !order) {
+    console.error('createPurchaseOrder order error:', orderError);
+    return { success: false, error: orderError?.message };
+  }
+
+  // 발주 품목 생성
+  const itemsToInsert = input.items.map((item) => ({
+    order_id: order.id,
+    ingredient_id: item.ingredient_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.quantity * (item.unit_price || 0),
+  }));
+
+  const { error: itemsError } = await supabase
+    .from('purchase_order_items')
+    .insert(itemsToInsert);
+
+  if (itemsError) {
+    console.error('createPurchaseOrder items error:', itemsError);
+    // 발주서 삭제 (롤백)
+    await supabase.from('purchase_orders').delete().eq('id', order.id);
+    return { success: false, error: itemsError.message };
+  }
+
+  return { success: true, data: order };
+}
+
+/**
+ * 발주서 상태 변경
+ */
+export async function updatePurchaseOrderStatus(
+  orderId: number,
+  status: PurchaseOrderStatus,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('updatePurchaseOrderStatus error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 발주서 삭제
+ */
+export async function deletePurchaseOrder(
+  orderId: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 품목 먼저 삭제 (cascade가 있지만 명시적으로)
+  await supabase.from('purchase_order_items').delete().eq('order_id', orderId);
+
+  const { error } = await supabase
+    .from('purchase_orders')
+    .delete()
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('deletePurchaseOrder error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 발주 → 입고 처리 (발주 상태를 received로 변경하고 재고 증가)
+ */
+export async function receivePurchaseOrder(
+  orderId: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 발주서 조회
+  const order = await getPurchaseOrderById(orderId);
+  if (!order) {
+    return { success: false, error: '발주서를 찾을 수 없습니다.' };
+  }
+
+  if (order.status === 'received') {
+    return { success: false, error: '이미 입고 처리된 발주서입니다.' };
+  }
+
+  // 각 품목에 대해 입고 처리
+  for (const item of order.items || []) {
+    if (!item.ingredient_id) continue;
+
+    // 재고 이동 생성 (입고)
+    await createStockMovement({
+      ingredient_id: item.ingredient_id,
+      movement_type: 'in',
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      reference_no: order.order_number,
+      supplier: order.supplier,
+      note: '발주 입고',
+    });
+  }
+
+  // 발주 상태 변경
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({
+      status: 'received',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('receivePurchaseOrder error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * 저재고 품목 기반 발주 추천
+ */
+export async function getReorderRecommendations(branchId?: string): Promise<
+  {
+    ingredient_id: string;
+    ingredient_name: string;
+    unit: string;
+    current_qty: number;
+    reorder_point: number;
+    recommended_qty: number;
+    supplier?: string;
+  }[]
+> {
+  const ingredients = await getAllIngredients();
+
+  const recommendations = (ingredients || [])
+    .filter((item) => {
+      const reorderPoint = item.reorder_point ?? 0;
+      const currentQty = item.current_qty ?? 0;
+      return currentQty <= reorderPoint;
+    })
+    .map((item) => {
+      // 권장 발주량 = 안전재고 또는 재주문점의 2배
+      const targetQty = item.safety_stock ?? (item.reorder_point ?? 0) * 2;
+      const recommendedQty = Math.max(0, targetQty - (item.current_qty ?? 0));
+
+      return {
+        ingredient_id: String(item.id),
+        ingredient_name: item.ingredient_name ?? '',
+        unit: item.unit ?? '',
+        current_qty: item.current_qty ?? 0,
+        reorder_point: item.reorder_point ?? 0,
+        recommended_qty: recommendedQty,
+        supplier: item.preferred_supplier ?? undefined,
+      };
+    })
+    .sort((a, b) => a.current_qty - b.current_qty);
+
+  return recommendations;
+}
+
+// ========== 일괄 입고 처리 ==========
+
+export type BulkStockMovementItem = {
+  ingredient_id: string;
+  quantity: number;
+  unit_price?: number;
+  supplier?: string;
+  reference_no?: string;
+  note?: string;
+};
+
+/**
+ * 여러 재료의 입고를 한번에 처리
+ * @param items - 입고 항목 배열
+ * @param commonData - 공통 데이터 (공급처, 참조번호 등)
+ */
+export async function bulkCreateStockMovements(
+  items: BulkStockMovementItem[],
+  commonData?: {
+    supplier?: string;
+    reference_no?: string;
+    note?: string;
+  },
+): Promise<{
+  success: boolean;
+  processed: number;
+  failed: number;
+  errors: string[];
+}> {
+  const errors: string[] = [];
+  let processed = 0;
+  let failed = 0;
+
+  for (const item of items) {
+    const result = await createStockMovement({
+      ingredient_id: item.ingredient_id,
+      movement_type: 'in',
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      supplier: item.supplier || commonData?.supplier,
+      reference_no: item.reference_no || commonData?.reference_no,
+      note: item.note || commonData?.note,
+    });
+
+    if (result.success) {
+      processed++;
+    } else {
+      failed++;
+      errors.push(`재료 ID ${item.ingredient_id}: ${result.error}`);
+    }
+  }
+
+  return {
+    success: failed === 0,
+    processed,
+    failed,
+    errors,
+  };
 }

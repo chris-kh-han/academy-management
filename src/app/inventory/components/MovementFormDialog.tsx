@@ -249,11 +249,12 @@ export function MovementFormDialog({
               </Label>
               <div className='col-span-3 flex gap-2 items-center'>
                 {formData.movement_type === 'adjustment' && (
-                  <div className='flex rounded-md border'>
+                  <div className='flex rounded-md border' role='group' aria-label='수량 조정 부호'>
                     <button
                       type='button'
                       onClick={() => setAdjustmentSign('+')}
-                      className={`px-3 py-2 text-sm font-medium rounded-l-md ${
+                      aria-pressed={adjustmentSign === '+'}
+                      className={`px-3 py-2 text-sm font-medium rounded-l-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                         adjustmentSign === '+'
                           ? 'bg-green-100 text-green-700'
                           : 'bg-white text-gray-500 hover:bg-gray-50'
@@ -264,7 +265,8 @@ export function MovementFormDialog({
                     <button
                       type='button'
                       onClick={() => setAdjustmentSign('-')}
-                      className={`px-3 py-2 text-sm font-medium rounded-r-md border-l ${
+                      aria-pressed={adjustmentSign === '-'}
+                      className={`px-3 py-2 text-sm font-medium rounded-r-md border-l focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                         adjustmentSign === '-'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-white text-gray-500 hover:bg-gray-50'
@@ -277,6 +279,7 @@ export function MovementFormDialog({
                 <Input
                   id='quantity'
                   type='number'
+                  inputMode='decimal'
                   min='0'
                   step='0.01'
                   placeholder='0'
@@ -301,6 +304,7 @@ export function MovementFormDialog({
                   <Input
                     id='unit_price'
                     type='number'
+                    inputMode='decimal'
                     min='0'
                     placeholder='0'
                     value={formData.unit_price}

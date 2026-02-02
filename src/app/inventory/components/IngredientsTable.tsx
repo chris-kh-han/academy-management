@@ -54,7 +54,41 @@ export type Ingredient = {
   current_qty: number;
   reorder_point: number | null;
   safety_stock: number | null;
+  // 새로 추가된 필드
+  priority?: number;
+  storage_location?: string | null;
+  packs_per_box?: number | null;
+  units_per_pack?: number | null;
 };
+
+// 우선순위 뱃지 스타일
+function getPriorityBadge(priority: number | undefined): {
+  label: string;
+  className: string;
+} {
+  switch (priority) {
+    case 1:
+      return {
+        label: '1순위',
+        className: 'bg-red-100 text-red-700',
+      };
+    case 2:
+      return {
+        label: '2순위',
+        className: 'bg-yellow-100 text-yellow-700',
+      };
+    case 3:
+      return {
+        label: '3순위',
+        className: 'bg-gray-100 text-gray-600',
+      };
+    default:
+      return {
+        label: '-',
+        className: 'bg-gray-50 text-gray-400',
+      };
+  }
+}
 
 // 재고 상태 계산
 function getStockStatus(
@@ -185,6 +219,20 @@ export function IngredientsTable({
         ),
       },
       {
+        accessorKey: 'priority',
+        header: '우선',
+        cell: ({ row }) => {
+          const badge = getPriorityBadge(row.original.priority);
+          return (
+            <span
+              className={`px-2 py-0.5 rounded text-xs font-medium ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          );
+        },
+      },
+      {
         accessorKey: 'category',
         header: ({ column }) => (
           <Button
@@ -198,6 +246,13 @@ export function IngredientsTable({
         ),
         cell: ({ row }) => (
           <div className='capitalize'>{row.getValue('category') || '-'}</div>
+        ),
+      },
+      {
+        accessorKey: 'storage_location',
+        header: '보관위치',
+        cell: ({ row }) => (
+          <div className='text-sm'>{row.original.storage_location || '-'}</div>
         ),
       },
       {
@@ -225,7 +280,7 @@ export function IngredientsTable({
           const qty = row.getValue('current_qty') as number;
           const unit = row.original.unit || '';
           return (
-            <div>
+            <div className='tabular-nums'>
               {qty} {unit}
             </div>
           );
@@ -247,7 +302,9 @@ export function IngredientsTable({
           const reorderPoint = row.getValue('reorder_point') as number | null;
           const unit = row.original.unit || '';
           return (
-            <div>{reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}</div>
+            <div className='tabular-nums'>
+              {reorderPoint !== null ? `${reorderPoint} ${unit}` : '-'}
+            </div>
           );
         },
       },
@@ -267,7 +324,9 @@ export function IngredientsTable({
           const safetyStock = row.getValue('safety_stock') as number | null;
           const unit = row.original.unit || '';
           return (
-            <div>{safetyStock !== null ? `${safetyStock} ${unit}` : '-'}</div>
+            <div className='tabular-nums'>
+              {safetyStock !== null ? `${safetyStock} ${unit}` : '-'}
+            </div>
           );
         },
       },
@@ -286,7 +345,7 @@ export function IngredientsTable({
         cell: ({ row }) => {
           const price = row.getValue('price') as number;
           return (
-            <div className='font-medium'>
+            <div className='font-medium tabular-nums'>
               {price ? formatCurrency(price) : '-'}
             </div>
           );
@@ -360,7 +419,9 @@ export function IngredientsTable({
     if (isMobile) {
       setColumnVisibility({
         select: false,
+        priority: false,
         category: false,
+        storage_location: false,
         specification: false,
         reorder_point: false,
         safety_stock: false,
@@ -414,7 +475,7 @@ export function IngredientsTable({
               <button
                 key={size}
                 onClick={() => table.setPageSize(size)}
-                className={`text-xs px-2 py-1 rounded ${
+                className={`text-xs px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   table.getState().pagination.pageSize === size
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted'
@@ -437,7 +498,9 @@ export function IngredientsTable({
                 .map((column) => {
                   const columnNames: Record<string, string> = {
                     ingredient_name: '품목명',
+                    priority: '우선순위',
                     category: '카테고리',
+                    storage_location: '보관위치',
                     specification: '규격',
                     current_qty: '현재 재고',
                     reorder_point: '재주문점',
