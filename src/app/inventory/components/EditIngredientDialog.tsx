@@ -91,6 +91,23 @@ const CATEGORY_OPTIONS = [
   { value: '기타', label: '기타 (직접 입력)' },
 ];
 
+// 우선순위 옵션
+const PRIORITY_OPTIONS = [
+  { value: '1', label: '1순위 (필수)', description: '없으면 영업 불가' },
+  { value: '2', label: '2순위 (중요)', description: '영업에 영향' },
+  { value: '3', label: '3순위 (보조)', description: '없어도 영업 가능' },
+];
+
+// 기본 보관위치 옵션
+const DEFAULT_STORAGE_LOCATIONS = [
+  '냉장고1',
+  '냉장고2',
+  '냉동고',
+  '창고',
+  '매장',
+  '주방',
+];
+
 // 모든 단위 값 추출
 const ALL_UNIT_VALUES = UNIT_GROUPS.flatMap((g) =>
   g.options.map((o) => o.value),
@@ -107,6 +124,11 @@ type Ingredient = {
   reorder_point: number | null;
   safety_stock: number | null;
   price: number | null;
+  // 새로 추가된 필드
+  priority?: number;
+  storage_location?: string | null;
+  packs_per_box?: number | null;
+  units_per_pack?: number | null;
 };
 
 type EditIngredientDialogProps = {
@@ -114,6 +136,7 @@ type EditIngredientDialogProps = {
   onOpenChange: (open: boolean) => void;
   ingredient: Ingredient | null;
   existingCategories?: string[];
+  existingStorageLocations?: string[];
 };
 
 export function EditIngredientDialog({
@@ -121,6 +144,7 @@ export function EditIngredientDialog({
   onOpenChange,
   ingredient,
   existingCategories = [],
+  existingStorageLocations = [],
 }: EditIngredientDialogProps) {
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -134,6 +158,21 @@ export function EditIngredientDialog({
   const [reorderPoint, setReorderPoint] = React.useState('');
   const [safetyStock, setSafetyStock] = React.useState('');
   const [price, setPrice] = React.useState('');
+  // 새로 추가된 필드
+  const [priority, setPriority] = React.useState('2');
+  const [storageLocation, setStorageLocation] = React.useState('');
+  const [customStorageLocation, setCustomStorageLocation] = React.useState('');
+  const [packsPerBox, setPacksPerBox] = React.useState('');
+  const [unitsPerPack, setUnitsPerPack] = React.useState('');
+
+  // 보관위치 옵션 병합 (기존 + 기본)
+  const allStorageLocations = React.useMemo(() => {
+    const combined = new Set([
+      ...existingStorageLocations,
+      ...DEFAULT_STORAGE_LOCATIONS,
+    ]);
+    return Array.from(combined);
+  }, [existingStorageLocations]);
 
   // Load ingredient data when dialog opens
   React.useEffect(() => {
@@ -182,8 +221,35 @@ export function EditIngredientDialog({
         ingredient.safety_stock !== null ? String(ingredient.safety_stock) : '',
       );
       setPrice(ingredient.price !== null ? String(ingredient.price) : '');
+
+      // 새로 추가된 필드 처리
+      setPriority(String(ingredient.priority ?? 2));
+
+      // 보관 위치 처리
+      const loc = ingredient.storage_location || '';
+      if (loc && allStorageLocations.includes(loc)) {
+        setStorageLocation(loc);
+        setCustomStorageLocation('');
+      } else if (loc) {
+        setStorageLocation('기타');
+        setCustomStorageLocation(loc);
+      } else {
+        setStorageLocation('');
+        setCustomStorageLocation('');
+      }
+
+      setPacksPerBox(
+        ingredient.packs_per_box !== null
+          ? String(ingredient.packs_per_box)
+          : '',
+      );
+      setUnitsPerPack(
+        ingredient.units_per_pack !== null
+          ? String(ingredient.units_per_pack)
+          : '',
+      );
     }
-  }, [open, ingredient, existingCategories]);
+  }, [open, ingredient, existingCategories, allStorageLocations]);
 
   const handleSave = async () => {
     if (!ingredient) return;
@@ -192,6 +258,10 @@ export function EditIngredientDialog({
     const finalCategory =
       category === '기타' ? customCategory.trim() : category;
     const finalUnit = unit === '기타' ? customUnit.trim() : unit;
+    const finalStorageLocation =
+      storageLocation === '기타'
+        ? customStorageLocation.trim()
+        : storageLocation;
 
     if (!trimmedName) {
       toast.error('품목명을 입력해주세요.');
@@ -224,6 +294,11 @@ export function EditIngredientDialog({
         reorder_point: reorderPoint ? Number(reorderPoint) : null,
         safety_stock: safetyStock ? Number(safetyStock) : null,
         price: price ? Number(price) : null,
+        // 새로 추가된 필드
+        priority: Number(priority) as 1 | 2 | 3,
+        storage_location: finalStorageLocation || null,
+        packs_per_box: packsPerBox ? Number(packsPerBox) : null,
+        units_per_pack: unitsPerPack ? Number(unitsPerPack) : null,
       });
 
       if (result.success) {
@@ -265,6 +340,7 @@ export function EditIngredientDialog({
                 value={ingredientName}
                 onChange={(e) => setIngredientName(e.target.value)}
                 placeholder='예: 밀가루, 토마토'
+                autoComplete='off'
               />
             </div>
 
@@ -307,10 +383,13 @@ export function EditIngredientDialog({
                 </Select>
                 {category === '기타' && (
                   <Input
+                    id='edit-customCategory'
                     className='mt-2 placeholder:text-gray-400'
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
                     placeholder='카테고리 직접 입력'
+                    autoComplete='off'
+                    aria-label='카테고리 직접 입력'
                   />
                 )}
               </div>
@@ -357,10 +436,13 @@ export function EditIngredientDialog({
                 </Select>
                 {unit === '기타' && (
                   <Input
+                    id='edit-customUnit'
                     className='mt-2 placeholder:text-gray-400'
                     value={customUnit}
                     onChange={(e) => setCustomUnit(e.target.value)}
                     placeholder='단위 직접 입력'
+                    autoComplete='off'
+                    aria-label='단위 직접 입력'
                   />
                 )}
               </div>
@@ -375,6 +457,7 @@ export function EditIngredientDialog({
                 id='edit-reorderPoint'
                 className='col-span-3 placeholder:text-gray-400'
                 type='number'
+                inputMode='decimal'
                 min='0'
                 value={reorderPoint}
                 onChange={(e) => setReorderPoint(e.target.value)}
@@ -391,6 +474,7 @@ export function EditIngredientDialog({
                 id='edit-safetyStock'
                 className='col-span-3 placeholder:text-gray-400'
                 type='number'
+                inputMode='decimal'
                 min='0'
                 value={safetyStock}
                 onChange={(e) => setSafetyStock(e.target.value)}
@@ -407,11 +491,118 @@ export function EditIngredientDialog({
                 id='edit-price'
                 className='col-span-3 placeholder:text-gray-400'
                 type='number'
+                inputMode='decimal'
                 min='0'
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder='0'
               />
+            </div>
+
+            {/* 구분선 */}
+            <div className='col-span-4 border-t pt-2 mt-2'>
+              <span className='text-xs text-muted-foreground'>
+                마감 체크 관련 설정
+              </span>
+            </div>
+
+            {/* 우선순위 */}
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='edit-priority' className='text-right'>
+                우선순위
+              </Label>
+              <div className='col-span-3'>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder='우선순위 선택' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className='flex flex-col'>
+                          <span>{option.label}</span>
+                          <span className='text-xs text-muted-foreground'>
+                            {option.description}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 보관 위치 */}
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='edit-storageLocation' className='text-right'>
+                보관 위치
+              </Label>
+              <div className='col-span-3'>
+                <Select
+                  value={storageLocation}
+                  onValueChange={setStorageLocation}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='보관 위치 선택' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel className='text-gray-400 text-xs'>
+                        위치 선택
+                      </SelectLabel>
+                      {allStorageLocations.map((loc) => (
+                        <SelectItem key={loc} value={loc}>
+                          {loc}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value='기타'>기타 (직접 입력)</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {storageLocation === '기타' && (
+                  <Input
+                    id='edit-customStorageLocation'
+                    className='mt-2 placeholder:text-gray-400'
+                    value={customStorageLocation}
+                    onChange={(e) => setCustomStorageLocation(e.target.value)}
+                    placeholder='보관 위치 직접 입력'
+                    autoComplete='off'
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* 포장 단위 */}
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label className='text-right'>포장 단위</Label>
+              <div className='col-span-3 flex gap-2'>
+                <div className='flex-1'>
+                  <Input
+                    id='edit-packsPerBox'
+                    className='placeholder:text-gray-400'
+                    type='number'
+                    inputMode='numeric'
+                    min='1'
+                    value={packsPerBox}
+                    onChange={(e) => setPacksPerBox(e.target.value)}
+                    placeholder='박스당 팩 수'
+                  />
+                  <span className='text-xs text-muted-foreground'>팩/박스</span>
+                </div>
+                <div className='flex-1'>
+                  <Input
+                    id='edit-unitsPerPack'
+                    className='placeholder:text-gray-400'
+                    type='number'
+                    inputMode='numeric'
+                    min='1'
+                    value={unitsPerPack}
+                    onChange={(e) => setUnitsPerPack(e.target.value)}
+                    placeholder='팩당 낱개 수'
+                  />
+                  <span className='text-xs text-muted-foreground'>개/팩</span>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
