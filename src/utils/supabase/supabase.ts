@@ -2407,16 +2407,18 @@ export async function saveClosingItem(
   const supabase = createServiceRoleClient();
 
   // closing_qty 계산
-  const closingQty =
-    item.opening_qty - item.used_qty - (item.waste_qty || 0);
+  const openingQty = item.opening_qty ?? 0;
+  const usedQty = item.used_qty ?? 0;
+  const wasteQty = item.waste_qty ?? 0;
+  const closingQty = openingQty - usedQty - wasteQty;
 
   const { error } = await supabase.from('daily_closing_items').upsert(
     {
       closing_id: closingId,
       ingredient_id: item.ingredient_id,
-      opening_qty: item.opening_qty,
-      used_qty: item.used_qty,
-      waste_qty: item.waste_qty || 0,
+      opening_qty: openingQty,
+      used_qty: usedQty,
+      waste_qty: wasteQty,
       closing_qty: closingQty,
       note: item.note,
     },
@@ -2443,15 +2445,20 @@ export async function bulkSaveClosingItems(
   const supabase = createServiceRoleClient();
 
   // 각 아이템의 closing_qty 계산 후 upsert용 데이터 생성
-  const upsertData = items.map((item) => ({
-    closing_id: closingId,
-    ingredient_id: item.ingredient_id,
-    opening_qty: item.opening_qty,
-    used_qty: item.used_qty,
-    waste_qty: item.waste_qty || 0,
-    closing_qty: item.opening_qty - item.used_qty - (item.waste_qty || 0),
-    note: item.note,
-  }));
+  const upsertData = items.map((item) => {
+    const openingQty = item.opening_qty ?? 0;
+    const usedQty = item.used_qty ?? 0;
+    const wasteQty = item.waste_qty ?? 0;
+    return {
+      closing_id: closingId,
+      ingredient_id: item.ingredient_id,
+      opening_qty: openingQty,
+      used_qty: usedQty,
+      waste_qty: wasteQty,
+      closing_qty: openingQty - usedQty - wasteQty,
+      note: item.note,
+    };
+  });
 
   const { error } = await supabase
     .from('daily_closing_items')
@@ -2883,4 +2890,111 @@ export async function markRecommendationAsOrdered(
   }
 
   return { success: true };
+}
+
+// ========== 추가 함수들 ==========
+
+/**
+ * 오늘 입출고 건수 조회 (COUNT 쿼리로 최적화)
+ */
+export async function getTodayMovementsCount(): Promise<number> {
+  const supabase = createServiceRoleClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const { count, error } = await supabase
+    .from('stock_movements')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', today);
+
+  if (error) {
+    console.error('getTodayMovementsCount error:', error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * 일괄 입고 처리용 타입
+ */
+export type BulkStockMovementItem = {
+  ingredient_id: string;
+  quantity: number;
+  unit_price?: number;
+};
+
+/**
+ * 일괄 입고 처리 (거래명세서 스캔 등)
+ */
+export async function bulkCreateStockMovements(
+  items: BulkStockMovementItem[],
+  commonData?: {
+    supplier?: string;
+    reference_no?: string;
+    note?: string;
+  },
+): Promise<{ success: boolean; processed: number; failed: number; errors: string[] }> {
+  const supabase = createServiceRoleClient();
+  const errors: string[] = [];
+  let processed = 0;
+  let failed = 0;
+
+  for (const item of items) {
+    // 현재 재고 조회
+    const { data: ingredient, error: fetchError } = await supabase
+      .from('ingredients')
+      .select('current_qty')
+      .eq('id', item.ingredient_id)
+      .single();
+
+    if (fetchError || !ingredient) {
+      errors.push(`재료 ID ${item.ingredient_id} 조회 실패`);
+      failed++;
+      continue;
+    }
+
+    const previousQty = ingredient.current_qty ?? 0;
+    const resultingQty = previousQty + item.quantity;
+
+    // 입고 기록 생성
+    const { error: insertError } = await supabase.from('stock_movements').insert({
+      ingredient_id: item.ingredient_id,
+      movement_type: 'in',
+      quantity: item.quantity,
+      unit_price: item.unit_price ?? null,
+      total_price: item.unit_price ? item.quantity * item.unit_price : null,
+      previous_qty: previousQty,
+      resulting_qty: resultingQty,
+      supplier: commonData?.supplier ?? null,
+      reference_no: commonData?.reference_no ?? null,
+      note: commonData?.note ?? null,
+    });
+
+    if (insertError) {
+      errors.push(`재료 ID ${item.ingredient_id} 입고 기록 생성 실패: ${insertError.message}`);
+      failed++;
+      continue;
+    }
+
+    // 재고 수량 업데이트
+    const { error: updateError } = await supabase
+      .from('ingredients')
+      .update({ current_qty: resultingQty })
+      .eq('id', item.ingredient_id);
+
+    if (updateError) {
+      errors.push(`재료 ID ${item.ingredient_id} 재고 업데이트 실패: ${updateError.message}`);
+      failed++;
+      continue;
+    }
+
+    processed++;
+  }
+
+  return {
+    success: failed === 0,
+    processed,
+    failed,
+    errors,
+  };
 }
