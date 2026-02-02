@@ -1,44 +1,67 @@
 import {
   getAllIngredients,
-  getStockMovements,
   getStockMovementsSummary,
+  getRecentStockMovements,
+  getTodayMovementsCount,
 } from '@/utils/supabase/supabase';
-import { InventoryContent } from './components/InventoryContent';
-import { Ingredient } from './components/IngredientsTable';
+import { InventoryDashboard } from './components/InventoryDashboard';
 import { minDelay } from '@/lib/delay';
 
 export const dynamic = 'force-dynamic';
 
-const Inventory = async () => {
-  const [ingredients, movements, summary] = await Promise.all([
-    getAllIngredients(),
-    getStockMovements(),
-    getStockMovementsSummary(),
-    minDelay(),
-  ]);
+export default async function InventoryPage() {
+  // async-parallel: 독립적인 쿼리들을 병렬 실행
+  // server-dedup-props: 필요한 데이터만 조회 (getStockMovements 제거, getTodayMovementsCount 추가)
+  const [ingredients, summary, recentMovements, todayMovementsCount] =
+    await Promise.all([
+      getAllIngredients(),
+      getStockMovementsSummary(),
+      getRecentStockMovements(5), // 5개만 표시하므로 5개만 조회
+      getTodayMovementsCount(), // COUNT 쿼리로 최적화
+      minDelay(),
+    ]);
 
-  const tableData: Ingredient[] = (ingredients ?? []).map((item) => ({
+  // 재고 KPI 계산
+  const totalValue = (ingredients ?? []).reduce(
+    (sum, item) => sum + (item.current_qty ?? 0) * (item.price ?? 0),
+    0,
+  );
+
+  const lowStockItems = (ingredients ?? []).filter((item) => {
+    const reorderPoint = item.reorder_point ?? 0;
+    return (item.current_qty ?? 0) < reorderPoint && (item.current_qty ?? 0) > 0;
+  });
+
+  const outOfStockItems = (ingredients ?? []).filter(
+    (item) => (item.current_qty ?? 0) <= 0,
+  );
+
+  // ingredientOptions for InvoiceScanDialog
+  const ingredientOptions = (ingredients ?? []).map((item) => ({
     id: String(item.id),
-    ingredient_id: item.ingredient_id ?? '',
-    ingredient_name: item.ingredient_name ?? '',
-    category: item.category ?? '',
-    specification: item.specification ?? null,
+    name: item.ingredient_name ?? '',
     unit: item.unit ?? '',
-    price: item.price ?? 0,
     current_qty: item.current_qty ?? 0,
-    reorder_point: item.reorder_point ?? null,
-    safety_stock: item.safety_stock ?? null,
   }));
 
   return (
-    <div className='px-12 py-8 animate-slide-in-left'>
-      <InventoryContent
-        ingredients={tableData}
-        movements={movements ?? []}
+    <div className='px-4 py-6 sm:px-8 sm:py-8 md:px-12 animate-slide-in-left'>
+      <InventoryDashboard
+        totalValue={totalValue}
+        lowStockCount={lowStockItems.length}
+        outOfStockCount={outOfStockItems.length}
+        todayMovementsCount={todayMovementsCount}
         summary={summary}
+        lowStockItems={lowStockItems.slice(0, 5).map((item) => ({
+          id: String(item.id),
+          name: item.ingredient_name ?? '',
+          currentQty: item.current_qty ?? 0,
+          reorderPoint: item.reorder_point ?? 0,
+          unit: item.unit ?? '',
+        }))}
+        recentMovements={recentMovements}
+        ingredientOptions={ingredientOptions}
       />
     </div>
   );
-};
-
-export default Inventory;
+}
