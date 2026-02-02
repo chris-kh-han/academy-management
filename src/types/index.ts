@@ -488,8 +488,8 @@ export type DailyClosingItem = {
 
 export type DailyClosingItemInput = {
   ingredient_id: string;
-  opening_qty: number;
-  used_qty: number;
+  opening_qty?: number;
+  used_qty?: number;
   waste_qty?: number;
   closing_boxes?: number;
   closing_packs?: number;

@@ -149,9 +149,9 @@ export async function saveClosingAction(input: DailyClosingInput) {
 
     // 총 수량 계산: 박스*팩수*낱개수 + 팩*낱개수 + 낱개
     const closingQty =
-      item.closing_boxes * packsPerBox * unitsPerPack +
-      item.closing_packs * unitsPerPack +
-      item.closing_units;
+      (item.closing_boxes ?? 0) * packsPerBox * unitsPerPack +
+      (item.closing_packs ?? 0) * unitsPerPack +
+      (item.closing_units ?? 0);
 
     return {
       closing_id: closingId,
