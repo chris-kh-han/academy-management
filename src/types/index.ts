@@ -8,7 +8,7 @@ export type BranchRole = 'manager' | 'staff' | 'viewer';
 
 // 브랜드 (본사/프랜차이즈)
 export type Brand = {
-  id: string;
+    id: string;
   name: string;
   slug: string;
   description?: string;
@@ -449,17 +449,20 @@ export type Ingredient = {
   updated_at?: string;
 };
 
-// ========== 마감 체크 타입 ==========
+// ========== 마감 체크 관련 타입 ==========
+export type ClosingStatus = 'draft' | 'completed';
 export type DailyClosing = {
   id: string;
   branch_id: string;
   closing_date: string;
-  status: 'draft' | 'completed';
+  status: ClosingStatus;
   closed_by?: string;
   closed_at?: string;
   note?: string;
   created_at?: string;
   updated_at?: string;
+  // joined data
+  items?: DailyClosingItem[];
 };
 
 export type DailyClosingItem = {
@@ -471,23 +474,73 @@ export type DailyClosingItem = {
   waste_qty: number;
   closing_qty: number;
   // 새로 추가된 필드 (박스/팩/낱개)
-  closing_boxes: number;
-  closing_packs: number;
-  closing_units: number;
+  closing_boxes?: number;
+  closing_packs?: number;
+  closing_units?: number;
   note?: string;
   created_at?: string;
   // joined data
   ingredient?: Ingredient;
+  ingredient_name?: string;
+  unit?: string;
+  category?: string;
+};
+
+export type DailyClosingItemInput = {
+  ingredient_id: string;
+  opening_qty: number;
+  used_qty: number;
+  waste_qty?: number;
+  closing_boxes?: number;
+  closing_packs?: number;
+  closing_units?: number;
+  note?: string;
 };
 
 export type DailyClosingInput = {
   branch_id: string;
   closing_date: string;
-  items: {
-    ingredient_id: string;
-    closing_boxes: number;
-    closing_packs: number;
-    closing_units: number;
-    note?: string;
-  }[];
+  items: DailyClosingItemInput[];
+};
+
+// ========== 발주 추천 관련 타입 ==========
+
+export type CalculationMethod = 'target' | 'average';
+export type RecommendationStatus = 'pending' | 'ordered';
+
+export type OrderRecommendation = {
+  id: string;
+  branch_id: string;
+  recommendation_date: string;
+  calculation_method: CalculationMethod;
+  order_period_days: number;
+  status: RecommendationStatus;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  items?: OrderRecommendationItem[];
+};
+
+export type OrderRecommendationItem = {
+  id: string;
+  recommendation_id: string;
+  ingredient_id: string;
+  current_qty: number;
+  target_qty?: number;
+  avg_daily_usage?: number;
+  recommended_qty: number;
+  ordered_qty?: number;
+  created_at?: string;
+  // joined data
+  ingredient_name?: string;
+  unit?: string;
+  category?: string;
+};
+
+export type GenerateRecommendationInput = {
+  branch_id: string;
+  calculation_method: CalculationMethod;
+  order_period_days?: number;
+  avg_days?: number;
 };

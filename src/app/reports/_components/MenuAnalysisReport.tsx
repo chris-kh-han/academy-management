@@ -29,8 +29,8 @@ import {
   Legend,
 } from 'recharts';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MenuAnalysisReportProps = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   menuAnalysis: any[];
   topMenus: {
     menu_id: number;

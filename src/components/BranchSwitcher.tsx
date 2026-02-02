@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useBranch } from '@/contexts/BranchContext';
-import { Building2, Loader2 } from 'lucide-react';
+import { useBranch } from "@/contexts/BranchContext";
+import { Building2, Loader2 } from "lucide-react";
 
 /**
  * B2C 모드: 브랜드 이름만 표시 (지점 선택 UI 숨김)
@@ -13,8 +13,8 @@ export default function BranchSwitcher() {
   // 초기화 중
   if (!isInitialized || isLoading) {
     return (
-      <div className='flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground'>
-        <Loader2 className='h-4 w-4 animate-spin' />
+      <div className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-sm">
+        <Loader2 className="h-4 w-4 animate-spin" />
         <span>로딩중...</span>
       </div>
     );
@@ -27,9 +27,9 @@ export default function BranchSwitcher() {
 
   // 브랜드 이름만 표시
   return (
-    <div className='flex items-center gap-2 px-3 py-2'>
-      <Building2 className='h-4 w-4 text-primary' />
-      <span className='text-sm font-medium'>{currentBrand.name}</span>
+    <div className="flex items-center gap-2 px-3 py-2">
+      <Building2 className="text-primary h-4 w-4" />
+      <span className="text-sm font-medium">{currentBrand.name}</span>
     </div>
   );
 }

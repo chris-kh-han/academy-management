@@ -6,23 +6,23 @@ import FeatureCarousel from './(landing)/FeatureCarousel';
 
 const features = [
   {
-    title: '재고 관리',
-    description: '실시간 재고 현황 파악, 입출고 관리, 재고 부족 알림',
+    title: '재고 현황',
+    description: '실시간 재고 파악, 저재고 알림, 품목별 상태 관리',
     icon: '📦',
   },
   {
-    title: '메뉴 / 레시피',
-    description: '메뉴별 레시피 관리, 원가 자동 계산, 레시피 표준화',
-    icon: '🍳',
+    title: '마감 체크',
+    description: '매일 사용량/폐기량 입력, 자동 재고 차감',
+    icon: '✅',
   },
   {
-    title: '판매 분석',
-    description: '일별/월별 매출 현황, 인기 메뉴 분석, 트렌드 파악',
-    icon: '📊',
+    title: '입출고 관리',
+    description: '입고, 출고, 폐기, 조정 이력 추적',
+    icon: '🔄',
   },
   {
     title: '리포트',
-    description: '재고 회전율, 손익 분석, 맞춤형 보고서 생성',
+    description: '재고 추이, 사용량 분석, 발주 추천',
     icon: '📈',
   },
 ];
@@ -34,7 +34,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect('/dashboard');
+    redirect('/inventory');
   }
 
   return (
@@ -49,9 +49,9 @@ export default async function Home() {
             <span className='text-[9rem] leading-none'>B</span>
           </h1>
           <p className='text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto'>
-            재고, 레시피, 판매를 한 곳에서 관리하세요.
+            재고를 쉽고 정확하게 관리하세요.
             <br />
-            효율적인 매장 운영을 위한 올인원 솔루션
+            매일 마감 체크만 하면, 나머지는 앱이 관리합니다
           </p>
           <div className='flex gap-4 justify-center'>
             <AuthModal mode='sign-in'>
@@ -119,7 +119,7 @@ export default async function Home() {
 
           {/* Disclaimer */}
           <p className='text-xs text-slate-400 mb-6 leading-relaxed'>
-            푸&B는 F&B 매장 관리 플랫폼으로서, 재고 관리, 레시피 관리, 판매 분석
+            푸&B는 F&B 매장 관리 플랫폼으로서, 재고 관리, 마감 체크, 입출고 추적
             등의 서비스를 제공합니다. 본 서비스의 모든 콘텐츠에 대한 무단 복제,
             배포, 전송 등의 행위는 저작권법에 의해 보호됩니다.
           </p>

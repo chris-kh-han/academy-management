@@ -145,6 +145,7 @@ export function ColumnMappingDialog({
   const [mapping, setMapping] = useState<Partial<ColumnMapping>>({});
 
   // 초기 매핑 설정 (저장된 매핑 또는 자동 감지)
+  /* eslint-disable react-hooks/set-state-in-effect -- syncs state with prop changes */
   useEffect(() => {
     if (savedMapping) {
       // 저장된 매핑 중 현재 CSV 헤더에 존재하는 것만 적용
@@ -163,6 +164,7 @@ export function ColumnMappingDialog({
       setMapping(autoDetectMapping(csvHeaders));
     }
   }, [csvHeaders, savedMapping]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const updateMapping = (field: keyof ColumnMapping, value: string) => {
     setMapping((prev) => ({

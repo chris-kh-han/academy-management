@@ -6,7 +6,7 @@ import InventoryReport from './InventoryReport';
 import MenuAnalysisReport from './MenuAnalysisReport';
 import StockMovementsReport from './StockMovementsReport';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type ReportsContentProps = {
   salesByMenu: any[];
   inventory: any[];
@@ -25,6 +25,7 @@ type ReportsContentProps = {
     endDate: string;
   };
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export default function ReportsContent({
   salesByMenu,

@@ -33,13 +33,9 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { label: '대시보드', path: '/dashboard' },
-  { label: '재고 관리', path: '/inventory' },
-  { label: '메뉴/레서피', path: '/recipes' },
-  { label: '판매 관리', path: '/sales' },
+  { label: '재고 현황', path: '/inventory' },
+  { label: '마감 체크', path: '/closing' },
   { label: '리포트', path: '/reports' },
-  // { label: '근태 관리', path: '/attendance' },
-  // { label: '급여 관리', path: '/payroll' },
   { label: '설정', path: '/settings' },
 ];
 
