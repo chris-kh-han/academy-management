@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
+import InventoryKPICards from './components/InventoryKPICards';
 import SalesKPICards from './components/SalesKPICards';
+import ReorderAlerts from './components/ReorderAlerts';
 import SalesTrendChart from './components/SalesTrendChart';
 import TopMenusChart from './components/TopMenusChart';
 import CategoryPieChart from './components/CategoryPieChart';
@@ -31,12 +33,28 @@ export default async function DashboardPage() {
 
   return (
     <div className='px-12 py-8 animate-slide-in-left space-y-8'>
-      {/* 1. 핵심 지표 카드 - Priority 1 */}
+      {/* 1. 재고 KPI 카드 - Priority 1 (재고 중심) */}
+      <Suspense fallback={<KPISkeleton />}>
+        <InventoryKPICards />
+      </Suspense>
+
+      {/* 2. 저재고 알림 & 최근 입출고 */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        <Suspense fallback={<ListSkeleton />}>
+          <ReorderAlerts />
+        </Suspense>
+
+        <Suspense fallback={<TableSkeleton />}>
+          <RecentMovements />
+        </Suspense>
+      </div>
+
+      {/* 3. 매출 KPI 카드 */}
       <Suspense fallback={<KPISkeleton />}>
         <SalesKPICards />
       </Suspense>
 
-      {/* 2. 차트 섹션 */}
+      {/* 4. 차트 섹션 */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         <Suspense fallback={<ChartSkeleton />}>
           <SalesTrendChart />
@@ -45,20 +63,7 @@ export default async function DashboardPage() {
         <Suspense fallback={<ChartSkeleton />}>
           <TopMenusChart />
         </Suspense>
-
-        <Suspense fallback={<ChartSkeleton />}>
-          <CategoryPieChart />
-        </Suspense>
-
-        <Suspense fallback={<ListSkeleton />}>
-          <LowStockList />
-        </Suspense>
       </div>
-
-      {/* 3. 최근 입출고 내역 - Below fold */}
-      <Suspense fallback={<TableSkeleton />}>
-        <RecentMovements />
-      </Suspense>
     </div>
   );
 }
