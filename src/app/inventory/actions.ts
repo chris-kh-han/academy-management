@@ -7,6 +7,8 @@ import {
   createIngredient,
   updateIngredient,
   bulkCreateIngredients,
+  bulkCreateStockMovements,
+  type BulkStockMovementItem,
 } from '@/utils/supabase/supabase';
 import { revalidatePath } from 'next/cache';
 import type { StockMovementInput } from '@/types';
@@ -40,6 +42,11 @@ export async function createIngredientAction(input: {
   reorder_point?: number;
   safety_stock?: number;
   branch_id: string;
+  // 새로 추가된 필드
+  priority?: 1 | 2 | 3;
+  storage_location?: string;
+  packs_per_box?: number;
+  units_per_pack?: number;
 }) {
   const result = await createIngredient(input);
 
@@ -61,6 +68,11 @@ export async function updateIngredientAction(
     price?: number | null;
     reorder_point?: number | null;
     safety_stock?: number | null;
+    // 새로 추가된 필드
+    priority?: 1 | 2 | 3;
+    storage_location?: string | null;
+    packs_per_box?: number | null;
+    units_per_pack?: number | null;
   },
 ) {
   const result = await updateIngredient(id, input);
@@ -89,6 +101,24 @@ export async function uploadIngredientsAction(
   const result = await bulkCreateIngredients(ingredients);
 
   if (result.success && result.inserted > 0) {
+    revalidatePath('/inventory');
+  }
+
+  return result;
+}
+
+// 일괄 입고 처리 액션 (거래명세서 스캔 등)
+export async function bulkCreateStockMovementsAction(
+  items: BulkStockMovementItem[],
+  commonData?: {
+    supplier?: string;
+    reference_no?: string;
+    note?: string;
+  },
+) {
+  const result = await bulkCreateStockMovements(items, commonData);
+
+  if (result.processed > 0) {
     revalidatePath('/inventory');
   }
 

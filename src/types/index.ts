@@ -366,10 +366,91 @@ export type Payroll = {
   user_email?: string;
 };
 
+// ========== 발주 관리 타입 ==========
+export type PurchaseOrderStatus = 'draft' | 'pending' | 'ordered' | 'received' | 'cancelled';
+
+export type PurchaseOrder = {
+  id?: number;
+  order_number: string;
+  supplier?: string;
+  status: PurchaseOrderStatus;
+  order_date?: string;
+  expected_date?: string;
+  total_amount?: number;
+  notes?: string;
+  branch_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  items?: PurchaseOrderItem[];
+};
+
+export type PurchaseOrderItem = {
+  id?: number;
+  order_id?: number;
+  ingredient_id: string;
+  quantity: number;
+  unit_price?: number;
+  total_price?: number;
+  created_at?: string;
+  // joined data
+  ingredient_name?: string;
+  ingredient_unit?: string;
+};
+
+export type PurchaseOrderInput = {
+  supplier?: string;
+  expected_date?: string;
+  notes?: string;
+  branch_id: string;
+  items: {
+    ingredient_id: string;
+    quantity: number;
+    unit_price?: number;
+  }[];
+};
+
+// ========== 재고 우선순위 타입 ==========
+export type IngredientPriority = 1 | 2 | 3;
+
+// ========== 보관 위치 타입 ==========
+export type StorageLocation = {
+  id: string;
+  name: string;
+  description?: string;
+  branch_id?: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// ========== 재료 타입 (확장) ==========
+export type Ingredient = {
+  id: string;
+  ingredient_id: string;
+  ingredient_name: string;
+  category: string | null;
+  specification: string | null;
+  unit: string;
+  price: number | null;
+  current_qty: number;
+  reorder_point: number | null;
+  safety_stock: number | null;
+  target_stock: number | null;
+  preferred_supplier: string | null;
+  branch_id?: string;
+  // 새로 추가된 필드
+  priority: IngredientPriority;
+  storage_location: string | null;
+  packs_per_box: number | null;
+  units_per_pack: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 // ========== 마감 체크 관련 타입 ==========
-
 export type ClosingStatus = 'draft' | 'completed';
-
 export type DailyClosing = {
   id: string;
   branch_id: string;
@@ -392,9 +473,14 @@ export type DailyClosingItem = {
   used_qty: number;
   waste_qty: number;
   closing_qty: number;
+  // 새로 추가된 필드 (박스/팩/낱개)
+  closing_boxes?: number;
+  closing_packs?: number;
+  closing_units?: number;
   note?: string;
   created_at?: string;
   // joined data
+  ingredient?: Ingredient;
   ingredient_name?: string;
   unit?: string;
   category?: string;
@@ -405,7 +491,16 @@ export type DailyClosingItemInput = {
   opening_qty: number;
   used_qty: number;
   waste_qty?: number;
+  closing_boxes?: number;
+  closing_packs?: number;
+  closing_units?: number;
   note?: string;
+};
+
+export type DailyClosingInput = {
+  branch_id: string;
+  closing_date: string;
+  items: DailyClosingItemInput[];
 };
 
 // ========== 발주 추천 관련 타입 ==========
