@@ -8,7 +8,7 @@ export type BranchRole = 'manager' | 'staff' | 'viewer';
 
 // 브랜드 (본사/프랜차이즈)
 export type Brand = {
-    id: string;
+  id: string;
   name: string;
   slug: string;
   description?: string;
@@ -81,12 +81,12 @@ export type UserContext = {
 };
 
 export type Sale = {
+  menu_id?: string;
   menu_name: string;
   total_sales: number;
   sales_count: number;
   branch_id?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  menus?: { menu_name?: string } | { menu_name?: string }[] | null;
 };
 
 // 메뉴 판매 기록 (menu_sales 테이블)
@@ -367,7 +367,12 @@ export type Payroll = {
 };
 
 // ========== 발주 관리 타입 ==========
-export type PurchaseOrderStatus = 'draft' | 'pending' | 'ordered' | 'received' | 'cancelled';
+export type PurchaseOrderStatus =
+  | 'draft'
+  | 'pending'
+  | 'ordered'
+  | 'received'
+  | 'cancelled';
 
 export type PurchaseOrder = {
   id?: number;
