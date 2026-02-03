@@ -1,11 +1,21 @@
 import { createServiceRoleClient } from '@/utils/supabase/server';
 import type { Sale, UserContext, Branch } from '@/types';
+import { z } from 'zod';
+
+// ========== 입력 검증 스키마 ==========
+
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+  message: 'Date must be in YYYY-MM-DD format',
+});
 
 // ========== 날짜 유틸리티 함수들 ==========
 
-// 테스트용 고정 날짜 (나중에 실제 날짜로 변경 시 이 값만 수정하면 됨)
-const USE_FIXED_DATE = true; // false로 바꾸면 실제 오늘 날짜 사용
-const FIXED_TODAY = '2025-01-02';
+// 테스트용 고정 날짜 - 환경변수로 제어
+// USE_FIXED_DATE=true 와 FIXED_TODAY를 .env.local에서 설정
+const USE_FIXED_DATE =
+  process.env.NODE_ENV === 'development' &&
+  process.env.USE_FIXED_DATE === 'true';
+const FIXED_TODAY = process.env.FIXED_TODAY || '2025-01-02';
 
 // 타임존 설정 - 환경변수로 관리 (기본값: 한국)
 // 한국: 'Asia/Seoul', 미국 동부: 'America/New_York', 미국 서부: 'America/Los_Angeles'
@@ -429,11 +439,12 @@ export async function getSalesByPeriods() {
         found.total_sales += cur.total_sales;
         found.sales_count += cur.sales_count;
       } else {
+        const menuName = Array.isArray(cur.menus)
+          ? cur.menus[0]?.menu_name
+          : cur.menus?.menu_name;
         acc.push({
           ...cur,
-          menu_name:
-            cur.menus?.menu_name ||
-            (Array.isArray(cur.menus) ? cur.menus[0]?.menu_name : 'Unknown'),
+          menu_name: menuName || 'Unknown',
         });
       }
       return acc;
@@ -470,7 +481,11 @@ export async function createIngredient(input: {
   reorder_point?: number;
   safety_stock?: number;
   branch_id: string;
-}): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+}): Promise<{
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+}> {
   const supabase = createServiceRoleClient();
 
   // 중복 체크: 같은 branch_id 내에서 같은 이름 확인
@@ -555,7 +570,12 @@ export async function bulkCreateIngredients(
     safety_stock?: number;
     branch_id: string;
   }[],
-): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  inserted: number;
+  skipped: number;
+  error?: string;
+}> {
   const supabase = createServiceRoleClient();
 
   if (ingredients.length === 0) {
@@ -627,7 +647,12 @@ export async function bulkCreateMenus(
     category?: string;
     branch_id: string;
   }[],
-): Promise<{ success: boolean; inserted: number; skipped: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  inserted: number;
+  skipped: number;
+  error?: string;
+}> {
   const supabase = createServiceRoleClient();
 
   if (menus.length === 0) {
@@ -642,14 +667,10 @@ export async function bulkCreateMenus(
     .select('menu_name')
     .eq('branch_id', branchId);
 
-  const existingNames = new Set(
-    (existingMenus || []).map((m) => m.menu_name),
-  );
+  const existingNames = new Set((existingMenus || []).map((m) => m.menu_name));
 
   // 중복 제외한 새 메뉴만 필터링
-  const newMenus = menus.filter(
-    (m) => !existingNames.has(m.menu_name),
-  );
+  const newMenus = menus.filter((m) => !existingNames.has(m.menu_name));
 
   const skipped = menus.length - newMenus.length;
 
@@ -767,6 +788,14 @@ export async function fetchMenuRecipeIngredients(menuId: string) {
 
 // 1. 매출 리포트 - 기간별 매출 요약
 export async function getSalesReport(startDate: string, endDate: string) {
+  // 날짜 형식 검증
+  const startResult = dateSchema.safeParse(startDate);
+  const endResult = dateSchema.safeParse(endDate);
+  if (!startResult.success || !endResult.success) {
+    console.error('Invalid date format provided to getSalesReport');
+    return [];
+  }
+
   const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
@@ -786,6 +815,14 @@ export async function getSalesReport(startDate: string, endDate: string) {
 
 // 메뉴별 매출 집계
 export async function getSalesByMenu(startDate: string, endDate: string) {
+  // 날짜 형식 검증
+  const startResult = dateSchema.safeParse(startDate);
+  const endResult = dateSchema.safeParse(endDate);
+  if (!startResult.success || !endResult.success) {
+    console.error('Invalid date format provided to getSalesByMenu');
+    return [];
+  }
+
   const supabase = createServiceRoleClient();
 
   const { data, error } = await supabase
@@ -859,12 +896,16 @@ export async function getInventoryReport() {
 
 // 재고 부족 재료 (임계치 이하 또는 NULL)
 export async function getLowStockIngredients(threshold: number = 10) {
+  // threshold 검증 - 양수 정수만 허용
+  const safeThreshold = Math.max(0, Math.floor(Number(threshold) || 10));
+
   const supabase = createServiceRoleClient();
 
+  // 문자열 보간 대신 별도 쿼리로 안전하게 처리
   const { data, error } = await supabase
     .from('ingredients')
     .select('*')
-    .or(`current_qty.lt.${threshold},current_qty.is.null`)
+    .or(`current_qty.lt.${safeThreshold},current_qty.is.null`)
     .order('current_qty', { ascending: true, nullsFirst: true });
 
   if (error) {
@@ -1258,7 +1299,10 @@ export async function deleteStockMovement(
   }
 
   // 삭제 실행
-  const { error } = await supabase.from('stock_movements').delete().eq('id', id);
+  const { error } = await supabase
+    .from('stock_movements')
+    .delete()
+    .eq('id', id);
 
   if (error) {
     console.error('deleteStockMovement error:', error);
@@ -1936,7 +1980,9 @@ export async function getAllMenuOptions(branchId?: string) {
 
   let query = supabase
     .from('menu_options')
-    .select('option_id, option_name, option_category, additional_price, image_url, is_active')
+    .select(
+      'option_id, option_name, option_category, additional_price, image_url, is_active',
+    )
     .eq('is_active', true)
     .order('option_category', { ascending: true })
     .order('option_name', { ascending: true });
@@ -1973,9 +2019,7 @@ export async function getOptionsWithLinks(branchId?: string): Promise<{
 }> {
   const supabase = createServiceRoleClient();
 
-  let query = supabase
-    .from('menu_option_links')
-    .select(`
+  let query = supabase.from('menu_option_links').select(`
       id,
       category_id,
       menu_id,
@@ -2349,12 +2393,22 @@ export async function getDailyClosing(
   // 데이터 매핑
   return {
     ...data,
-    items: data.daily_closing_items?.map((item: DailyClosingItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
-      ...item,
-      ingredient_name: item.ingredients?.ingredient_name,
-      unit: item.ingredients?.unit,
-      category: item.ingredients?.category,
-    })),
+    items: data.daily_closing_items?.map(
+      (
+        item: DailyClosingItem & {
+          ingredients?: {
+            ingredient_name: string;
+            unit: string;
+            category: string;
+          };
+        },
+      ) => ({
+        ...item,
+        ingredient_name: item.ingredients?.ingredient_name,
+        unit: item.ingredients?.unit,
+        category: item.ingredients?.category,
+      }),
+    ),
   };
 }
 
@@ -2376,7 +2430,10 @@ export async function createDailyClosing(input: {
     .maybeSingle();
 
   if (existing) {
-    return { success: false, error: '해당 날짜의 마감 기록이 이미 존재합니다.' };
+    return {
+      success: false,
+      error: '해당 날짜의 마감 기록이 이미 존재합니다.',
+    };
   }
 
   const { data, error } = await supabase
@@ -2646,7 +2703,9 @@ export async function generateOrderRecommendations(
     const startDate = getDaysAgo(avgDays);
     const { data: closingItems } = await supabase
       .from('daily_closing_items')
-      .select('ingredient_id, used_qty, daily_closings!inner(closing_date, branch_id)')
+      .select(
+        'ingredient_id, used_qty, daily_closings!inner(closing_date, branch_id)',
+      )
       .gte('daily_closings.closing_date', startDate)
       .eq('daily_closings.branch_id', branchId);
 
@@ -2745,7 +2804,15 @@ export async function generateOrderRecommendations(
       ? {
           ...fullData,
           items: fullData.order_recommendation_items?.map(
-            (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+            (
+              item: OrderRecommendationItem & {
+                ingredients?: {
+                  ingredient_name: string;
+                  unit: string;
+                  category: string;
+                };
+              },
+            ) => ({
               ...item,
               ingredient_name: item.ingredients?.ingredient_name,
               unit: item.ingredients?.unit,
@@ -2795,7 +2862,15 @@ export async function getOrderRecommendations(
     data?.map((rec) => ({
       ...rec,
       items: rec.order_recommendation_items?.map(
-        (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+        (
+          item: OrderRecommendationItem & {
+            ingredients?: {
+              ingredient_name: string;
+              unit: string;
+              category: string;
+            };
+          },
+        ) => ({
           ...item,
           ingredient_name: item.ingredients?.ingredient_name,
           unit: item.ingredients?.unit,
@@ -2836,7 +2911,15 @@ export async function getOrderRecommendation(
   return {
     ...data,
     items: data.order_recommendation_items?.map(
-      (item: OrderRecommendationItem & { ingredients?: { ingredient_name: string; unit: string; category: string } }) => ({
+      (
+        item: OrderRecommendationItem & {
+          ingredients?: {
+            ingredient_name: string;
+            unit: string;
+            category: string;
+          };
+        },
+      ) => ({
         ...item,
         ingredient_name: item.ingredients?.ingredient_name,
         unit: item.ingredients?.unit,
@@ -2933,7 +3016,12 @@ export async function bulkCreateStockMovements(
     reference_no?: string;
     note?: string;
   },
-): Promise<{ success: boolean; processed: number; failed: number; errors: string[] }> {
+): Promise<{
+  success: boolean;
+  processed: number;
+  failed: number;
+  errors: string[];
+}> {
   const supabase = createServiceRoleClient();
   const errors: string[] = [];
   let processed = 0;
@@ -2957,21 +3045,25 @@ export async function bulkCreateStockMovements(
     const resultingQty = previousQty + item.quantity;
 
     // 입고 기록 생성
-    const { error: insertError } = await supabase.from('stock_movements').insert({
-      ingredient_id: item.ingredient_id,
-      movement_type: 'in',
-      quantity: item.quantity,
-      unit_price: item.unit_price ?? null,
-      total_price: item.unit_price ? item.quantity * item.unit_price : null,
-      previous_qty: previousQty,
-      resulting_qty: resultingQty,
-      supplier: commonData?.supplier ?? null,
-      reference_no: commonData?.reference_no ?? null,
-      note: commonData?.note ?? null,
-    });
+    const { error: insertError } = await supabase
+      .from('stock_movements')
+      .insert({
+        ingredient_id: item.ingredient_id,
+        movement_type: 'in',
+        quantity: item.quantity,
+        unit_price: item.unit_price ?? null,
+        total_price: item.unit_price ? item.quantity * item.unit_price : null,
+        previous_qty: previousQty,
+        resulting_qty: resultingQty,
+        supplier: commonData?.supplier ?? null,
+        reference_no: commonData?.reference_no ?? null,
+        note: commonData?.note ?? null,
+      });
 
     if (insertError) {
-      errors.push(`재료 ID ${item.ingredient_id} 입고 기록 생성 실패: ${insertError.message}`);
+      errors.push(
+        `재료 ID ${item.ingredient_id} 입고 기록 생성 실패: ${insertError.message}`,
+      );
       failed++;
       continue;
     }
@@ -2983,7 +3075,9 @@ export async function bulkCreateStockMovements(
       .eq('id', item.ingredient_id);
 
     if (updateError) {
-      errors.push(`재료 ID ${item.ingredient_id} 재고 업데이트 실패: ${updateError.message}`);
+      errors.push(
+        `재료 ID ${item.ingredient_id} 재고 업데이트 실패: ${updateError.message}`,
+      );
       failed++;
       continue;
     }
