@@ -1,16 +1,18 @@
-import { getTopSellingMenus } from '@/utils/supabase/supabase';
 import TopMenusChartClient from './TopMenusChartClient';
 
-export default async function TopMenusChart() {
-  const [topMenus7, topMenus30] = await Promise.all([
-    getTopSellingMenus(5, 7),
-    getTopSellingMenus(5, 30),
-  ]);
+type TopMenu = {
+  menu_id: number;
+  menu_name: string;
+  category: string;
+  total_sales: number;
+  sales_count: number;
+};
 
-  return (
-    <TopMenusChartClient
-      topMenus7={topMenus7}
-      topMenus30={topMenus30}
-    />
-  );
+type Props = {
+  topMenus7: TopMenu[];
+  topMenus30: TopMenu[];
+};
+
+export default function TopMenusChart({ topMenus7, topMenus30 }: Props) {
+  return <TopMenusChartClient topMenus7={topMenus7} topMenus30={topMenus30} />;
 }

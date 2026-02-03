@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -7,24 +8,29 @@ import {
   CalendarRange,
   Package,
 } from 'lucide-react';
-import {
-  getDashboardSalesSummary,
-  getLowStockIngredients,
-} from '@/utils/supabase/supabase';
+import { formatCurrency } from '@/lib/format';
+import type { Ingredient } from '@/types';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
-    maximumFractionDigits: 0,
-  }).format(value);
+type SalesSummary = {
+  yesterday: { total: number; change: number };
+  week: { total: number; change: number };
+  month: { total: number; change: number };
 };
 
-function ChangeIndicator({ change }: { change: number }) {
+type Props = {
+  salesSummary: SalesSummary;
+  ingredients: Ingredient[] | null;
+};
+
+const ChangeIndicator = memo(function ChangeIndicator({
+  change,
+}: {
+  change: number;
+}) {
   const isPositive = change >= 0;
   return (
     <div
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm ${
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium backdrop-blur-sm ${
         isPositive
           ? 'bg-emerald-500/20 text-emerald-700'
           : 'bg-red-500/20 text-red-700'
@@ -38,7 +44,7 @@ function ChangeIndicator({ change }: { change: number }) {
       <span>{Math.abs(change)}%</span>
     </div>
   );
-}
+});
 
 type KPICardProps = {
   icon: React.ReactNode;
@@ -47,24 +53,25 @@ type KPICardProps = {
   change?: number;
   subtext: string;
   variant?: 'default' | 'warning';
+  ariaLabel?: string;
 };
 
-function KPICard({
+const KPICard = memo(function KPICard({
   icon,
   label,
   value,
   change,
   subtext,
   variant = 'default',
+  ariaLabel,
 }: KPICardProps) {
   const isWarning = variant === 'warning';
 
   return (
     <div
-      className={`
-        liquid-glass liquid-glass-hover rounded-2xl p-5
-        ${isWarning ? 'liquid-glass-warning' : ''}
-      `}
+      role='region'
+      aria-label={ariaLabel || `${label}: ${value}`}
+      className={`liquid-glass liquid-glass-hover rounded-2xl p-5 ${isWarning ? 'liquid-glass-warning' : ''} `}
     >
       <div className='relative z-10 flex items-start justify-between'>
         <div className='space-y-2'>
@@ -78,33 +85,30 @@ function KPICard({
           </div>
         </div>
         <div
-          className={`
-            rounded-xl p-2.5 backdrop-blur-sm
-            ${
-              isWarning
-                ? 'bg-orange-500/20 text-orange-600 shadow-orange-200/50'
-                : 'bg-primary/15 text-primary shadow-primary/10'
-            }
-            shadow-[0_4px_12px_rgba(0,0,0,0.05)]
-          `}
+          className={`rounded-xl p-2.5 backdrop-blur-sm ${
+            isWarning
+              ? 'bg-orange-500/20 text-orange-600 shadow-orange-200/50'
+              : 'bg-primary/15 text-primary shadow-primary/10'
+          } shadow-[0_4px_12px_rgba(0,0,0,0.05)]`}
         >
           {icon}
         </div>
       </div>
     </div>
   );
-}
+});
 
-export default async function SalesKPICards() {
-  const [salesSummary, lowStockItems] = await Promise.all([
-    getDashboardSalesSummary(),
-    getLowStockIngredients(10),
-  ]);
+export default function SalesKPICards({ salesSummary, ingredients }: Props) {
+  // 저재고 품목 계산 (reorder_point 이하)
+  const lowStockItems = (ingredients ?? []).filter((item) => {
+    const reorderPoint = item.reorder_point ?? 0;
+    return (item.current_qty ?? 0) <= reorderPoint;
+  });
 
-  const hasLowStock = lowStockItems && lowStockItems.length > 0;
+  const hasLowStock = lowStockItems.length > 0;
 
   return (
-    <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
+    <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
       <KPICard
         icon={<Calendar className='h-5 w-5' />}
         label='어제 매출'
@@ -135,7 +139,7 @@ export default async function SalesKPICards() {
           )
         }
         label='재고 부족'
-        value={`${lowStockItems?.length ?? 0}개`}
+        value={`${lowStockItems.length}개`}
         subtext='임계치 이하 재료'
         variant={hasLowStock ? 'warning' : 'default'}
       />
