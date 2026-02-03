@@ -12,37 +12,34 @@ import {
 } from '@/components/ui/card';
 import PeriodToggle, { PERIOD_OPTIONS_7_30 } from '@/components/PeriodToggle';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency, formatShortDate } from '@/lib/format';
 
 const AreaChart = dynamic(
   () => import('recharts').then((mod) => mod.AreaChart),
-  { ssr: false }
+  { ssr: false },
 );
-const Area = dynamic(
-  () => import('recharts').then((mod) => mod.Area),
-  { ssr: false }
-);
-const XAxis = dynamic(
-  () => import('recharts').then((mod) => mod.XAxis),
-  { ssr: false }
-);
-const YAxis = dynamic(
-  () => import('recharts').then((mod) => mod.YAxis),
-  { ssr: false }
-);
+const Area = dynamic(() => import('recharts').then((mod) => mod.Area), {
+  ssr: false,
+});
+const XAxis = dynamic(() => import('recharts').then((mod) => mod.XAxis), {
+  ssr: false,
+});
+const YAxis = dynamic(() => import('recharts').then((mod) => mod.YAxis), {
+  ssr: false,
+});
 const CartesianGrid = dynamic(
   () => import('recharts').then((mod) => mod.CartesianGrid),
-  { ssr: false }
+  { ssr: false },
 );
-const Tooltip = dynamic(
-  () => import('recharts').then((mod) => mod.Tooltip),
-  { ssr: false }
-);
+const Tooltip = dynamic(() => import('recharts').then((mod) => mod.Tooltip), {
+  ssr: false,
+});
 const ResponsiveContainer = dynamic(
   () => import('recharts').then((mod) => mod.ResponsiveContainer),
   {
     ssr: false,
-    loading: () => <Skeleton className='h-[280px] w-full' />
-  }
+    loading: () => <Skeleton className='h-[280px] w-full' />,
+  },
 );
 
 type DailyTrend = {
@@ -56,19 +53,6 @@ type Props = {
   trend30: DailyTrend[];
 };
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW',
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-};
-
 type TrendPeriod = 7 | 30;
 
 export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
@@ -80,8 +64,8 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
       <CardHeader className='pb-2'>
         <div className='flex items-center justify-between'>
           <CardTitle className='flex items-center gap-2 text-base font-semibold'>
-            <div className='rounded-lg bg-primary/10 p-1.5'>
-              <TrendingUp className='h-4 w-4 text-primary' />
+            <div className='bg-primary/10 rounded-lg p-1.5'>
+              <TrendingUp className='text-primary h-4 w-4' />
             </div>
             일별 매출 추이
           </CardTitle>
@@ -91,7 +75,9 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
             options={PERIOD_OPTIONS_7_30}
           />
         </div>
-        <CardDescription className='text-xs'>최근 {period}일간 매출</CardDescription>
+        <CardDescription className='text-xs'>
+          최근 {period}일간 매출
+        </CardDescription>
       </CardHeader>
       <CardContent className='pt-2'>
         <div className='h-[280px]'>
@@ -103,10 +89,14 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
                   <stop offset='95%' stopColor='#F97316' stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' vertical={false} />
+              <CartesianGrid
+                strokeDasharray='3 3'
+                stroke='#f0f0f0'
+                vertical={false}
+              />
               <XAxis
                 dataKey='date'
-                tickFormatter={formatDate}
+                tickFormatter={formatShortDate}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: '#888' }}
@@ -120,7 +110,7 @@ export default function SalesTrendChartClient({ trend7, trend30 }: Props) {
               />
               <Tooltip
                 formatter={(value) => [formatCurrency(Number(value)), '매출']}
-                labelFormatter={(label) => formatDate(String(label))}
+                labelFormatter={(label) => formatShortDate(String(label))}
                 contentStyle={{
                   borderRadius: '8px',
                   border: '1px solid #f0f0f0',

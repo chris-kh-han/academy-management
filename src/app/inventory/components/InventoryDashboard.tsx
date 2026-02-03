@@ -29,7 +29,9 @@ import { MovementsSummary } from './MovementsSummary';
 // bundle-dynamic-imports: 모달은 클릭 전까지 불필요하므로 동적 로드
 const InvoiceScanDialog = dynamic(
   () =>
-    import('./InvoiceScanDialog').then((m) => ({ default: m.InvoiceScanDialog })),
+    import('./InvoiceScanDialog').then((m) => ({
+      default: m.InvoiceScanDialog,
+    })),
   { ssr: false },
 );
 import type { MovementType } from '@/types';
@@ -78,12 +80,13 @@ const currencyFormatter = new Intl.NumberFormat('ko-KR', {
 const formatCurrency = (value: number) => currencyFormatter.format(value);
 
 // 이동 타입 라벨
-const movementTypeLabels: Record<string, { label: string; className: string }> = {
-  in: { label: '입고', className: 'bg-green-100 text-green-700' },
-  out: { label: '출고', className: 'bg-blue-100 text-blue-700' },
-  waste: { label: '폐기', className: 'bg-red-100 text-red-700' },
-  adjustment: { label: '조정', className: 'bg-yellow-100 text-yellow-700' },
-};
+const movementTypeLabels: Record<string, { label: string; className: string }> =
+  {
+    in: { label: '입고', className: 'bg-green-100 text-green-700' },
+    out: { label: '출고', className: 'bg-blue-100 text-blue-700' },
+    waste: { label: '폐기', className: 'bg-red-100 text-red-700' },
+    adjustment: { label: '조정', className: 'bg-yellow-100 text-yellow-700' },
+  };
 
 // 날짜 포맷
 const formatTime = (dateString: string) => {
@@ -116,7 +119,7 @@ export function InventoryDashboard({
             재고 상태를 한눈에 확인합니다.
           </p>
         </div>
-        <div className='grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex'>
+        <div className='grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto'>
           <Button
             variant='outline'
             size='sm'
@@ -148,52 +151,64 @@ export function InventoryDashboard({
       />
 
       {/* KPI 카드 */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>총 재고 금액</CardTitle>
-            <Package className='h-4 w-4 text-muted-foreground' />
+            <Package className='text-muted-foreground h-4 w-4' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>{formatCurrency(totalValue)}</div>
-            <p className='text-xs text-muted-foreground'>현재 재고 가치</p>
+            <div className='text-2xl font-bold'>
+              {formatCurrency(totalValue)}
+            </div>
+            <p className='text-muted-foreground text-xs'>현재 재고 가치</p>
           </CardContent>
         </Card>
 
-        <Card className={lowStockCount > 0 ? 'border-orange-300 bg-orange-50' : ''}>
+        <Card
+          className={lowStockCount > 0 ? 'border-orange-300 bg-orange-50' : ''}
+        >
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>저재고 품목</CardTitle>
-            <AlertTriangle className={`h-4 w-4 ${lowStockCount > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+            <AlertTriangle
+              className={`h-4 w-4 ${lowStockCount > 0 ? 'text-orange-500' : 'text-muted-foreground'}`}
+            />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${lowStockCount > 0 ? 'text-orange-600' : ''}`}>
+            <div
+              className={`text-2xl font-bold ${lowStockCount > 0 ? 'text-orange-600' : ''}`}
+            >
               {lowStockCount}
             </div>
-            <p className='text-xs text-muted-foreground'>발주 필요</p>
+            <p className='text-muted-foreground text-xs'>발주 필요</p>
           </CardContent>
         </Card>
 
         <Card className={outOfStockCount > 0 ? 'border-red-300 bg-red-50' : ''}>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>품절 품목</CardTitle>
-            <PackageX className={`h-4 w-4 ${outOfStockCount > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+            <PackageX
+              className={`h-4 w-4 ${outOfStockCount > 0 ? 'text-red-500' : 'text-muted-foreground'}`}
+            />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${outOfStockCount > 0 ? 'text-red-600' : ''}`}>
+            <div
+              className={`text-2xl font-bold ${outOfStockCount > 0 ? 'text-red-600' : ''}`}
+            >
               {outOfStockCount}
             </div>
-            <p className='text-xs text-muted-foreground'>긴급 발주 필요</p>
+            <p className='text-muted-foreground text-xs'>긴급 발주 필요</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>오늘 입출고</CardTitle>
-            <ArrowUpDown className='h-4 w-4 text-muted-foreground' />
+            <ArrowUpDown className='text-muted-foreground h-4 w-4' />
           </CardHeader>
           <CardContent>
             <div className='text-2xl font-bold'>{todayMovementsCount}</div>
-            <p className='text-xs text-muted-foreground'>건</p>
+            <p className='text-muted-foreground text-xs'>건</p>
           </CardContent>
         </Card>
       </div>
@@ -202,7 +217,7 @@ export function InventoryDashboard({
       <MovementsSummary summary={summary} />
 
       {/* 저재고 알림 & 최근 입출고 */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+      <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
         {/* 저재고 알림 */}
         <Card>
           <CardHeader className='flex flex-row items-center justify-between'>
@@ -223,17 +238,21 @@ export function InventoryDashboard({
                 {lowStockItems.map((item) => (
                   <div
                     key={item.id}
-                    className='flex items-center justify-between p-3 bg-orange-50 rounded-lg'
+                    className='flex items-center justify-between rounded-lg bg-orange-50 p-3'
                   >
                     <div>
                       <p className='font-medium'>{item.name}</p>
-                      <p className='text-sm text-muted-foreground'>
+                      <p className='text-muted-foreground text-sm'>
                         현재: {item.currentQty} {item.unit} / 재주문점:{' '}
                         {item.reorderPoint} {item.unit}
                       </p>
                     </div>
                     <Link href='/orders'>
-                      <Button size='sm' variant='outline' className='cursor-pointer'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='cursor-pointer'
+                      >
                         발주
                       </Button>
                     </Link>
@@ -241,7 +260,7 @@ export function InventoryDashboard({
                 ))}
               </div>
             ) : (
-              <p className='text-muted-foreground text-center py-8'>
+              <p className='text-muted-foreground py-8 text-center'>
                 저재고 품목이 없습니다.
               </p>
             )}
@@ -268,14 +287,16 @@ export function InventoryDashboard({
                 {/* 모바일: 카드 레이아웃 */}
                 <div className='space-y-2 md:hidden'>
                   {recentMovements.map((movement) => {
-                    const typeConfig = movementTypeLabels[movement.movement_type] || {
+                    const typeConfig = movementTypeLabels[
+                      movement.movement_type
+                    ] || {
                       label: movement.movement_type,
                       className: 'bg-gray-100 text-gray-700',
                     };
                     return (
                       <div
                         key={movement.id}
-                        className='flex items-center justify-between p-3 bg-muted/30 rounded-lg'
+                        className='bg-muted/30 flex items-center justify-between rounded-lg p-3'
                       >
                         <div className='flex items-center gap-3'>
                           <Badge
@@ -285,10 +306,10 @@ export function InventoryDashboard({
                             {typeConfig.label}
                           </Badge>
                           <div>
-                            <p className='font-medium text-sm'>
+                            <p className='text-sm font-medium'>
                               {movement.ingredient_name}
                             </p>
-                            <p className='text-xs text-muted-foreground tabular-nums'>
+                            <p className='text-muted-foreground text-xs tabular-nums'>
                               {formatTime(movement.created_at)}
                             </p>
                           </div>
@@ -319,13 +340,15 @@ export function InventoryDashboard({
                   </TableHeader>
                   <TableBody>
                     {recentMovements.map((movement) => {
-                      const typeConfig = movementTypeLabels[movement.movement_type] || {
+                      const typeConfig = movementTypeLabels[
+                        movement.movement_type
+                      ] || {
                         label: movement.movement_type,
                         className: 'bg-gray-100 text-gray-700',
                       };
                       return (
                         <TableRow key={movement.id}>
-                          <TableCell className='text-sm text-muted-foreground tabular-nums'>
+                          <TableCell className='text-muted-foreground text-sm tabular-nums'>
                             {formatTime(movement.created_at)}
                           </TableCell>
                           <TableCell>
@@ -350,7 +373,7 @@ export function InventoryDashboard({
                 </Table>
               </>
             ) : (
-              <p className='text-muted-foreground text-center py-8'>
+              <p className='text-muted-foreground py-8 text-center'>
                 최근 입출고 내역이 없습니다.
               </p>
             )}

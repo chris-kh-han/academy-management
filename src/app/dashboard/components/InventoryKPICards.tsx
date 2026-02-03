@@ -1,10 +1,20 @@
+import { memo } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, PackageX, ArrowUpDown } from 'lucide-react';
-import {
-  getAllIngredients,
-  getStockMovements,
-  getStockMovementsSummary,
-} from '@/utils/supabase/supabase';
+import type { Ingredient, StockMovement } from '@/types';
+
+type MovementsSummary = {
+  incoming: number;
+  outgoing: number;
+  waste: number;
+  adjustment: number;
+};
+
+type Props = {
+  ingredients: Ingredient[] | null;
+  movements: StockMovement[];
+  summary: MovementsSummary;
+};
 
 type KPICardProps = {
   icon: React.ReactNode;
@@ -13,50 +23,51 @@ type KPICardProps = {
   subtext: string;
   variant?: 'default' | 'warning' | 'danger';
   href?: string;
+  ariaLabel?: string;
 };
 
-function KPICard({
+const KPICard = memo(function KPICard({
   icon,
   label,
   value,
   subtext,
   variant = 'default',
   href,
+  ariaLabel,
 }: KPICardProps) {
   const isWarning = variant === 'warning';
   const isDanger = variant === 'danger';
 
   const content = (
     <div
-      className={`
-        liquid-glass rounded-2xl p-5 transition-all duration-200
-        ${isWarning ? 'liquid-glass-warning' : ''}
-        ${isDanger ? 'bg-red-50 border-red-200' : ''}
-        ${href ? 'hover:shadow-lg hover:-translate-y-1 cursor-pointer' : ''}
-      `}
+      role='region'
+      aria-label={ariaLabel || `${label}: ${value}`}
+      className={`liquid-glass rounded-2xl p-5 transition-all duration-200 ${isWarning ? 'liquid-glass-warning' : ''} ${isDanger ? 'border-red-200 bg-red-50' : ''} ${href ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg' : ''} `}
     >
       <div className='relative z-10 flex items-start justify-between'>
         <div className='space-y-2'>
           <p className='text-sm font-medium text-slate-500'>{label}</p>
-          <p className={`text-2xl font-bold tracking-tight ${
-            isDanger ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-slate-800'
-          }`}>
+          <p
+            className={`text-2xl font-bold tracking-tight ${
+              isDanger
+                ? 'text-red-600'
+                : isWarning
+                  ? 'text-orange-600'
+                  : 'text-slate-800'
+            }`}
+          >
             {value}
           </p>
           <span className='text-xs text-slate-600'>{subtext}</span>
         </div>
         <div
-          className={`
-            rounded-xl p-2.5 backdrop-blur-sm
-            ${
-              isDanger
-                ? 'bg-red-500/20 text-red-600'
-                : isWarning
-                  ? 'bg-orange-500/20 text-orange-600'
-                  : 'bg-primary/15 text-primary'
-            }
-            shadow-[0_4px_12px_rgba(0,0,0,0.05)]
-          `}
+          className={`rounded-xl p-2.5 backdrop-blur-sm ${
+            isDanger
+              ? 'bg-red-500/20 text-red-600'
+              : isWarning
+                ? 'bg-orange-500/20 text-orange-600'
+                : 'bg-primary/15 text-primary'
+          } shadow-[0_4px_12px_rgba(0,0,0,0.05)]`}
         >
           {icon}
         </div>
@@ -69,19 +80,19 @@ function KPICard({
   }
 
   return content;
-}
+});
 
-export default async function InventoryKPICards() {
-  const [ingredients, movements, summary] = await Promise.all([
-    getAllIngredients(),
-    getStockMovements(),
-    getStockMovementsSummary(),
-  ]);
-
+export default function InventoryKPICards({
+  ingredients,
+  movements,
+  summary,
+}: Props) {
   // 저재고 품목 (재주문점 이하)
   const lowStockItems = (ingredients ?? []).filter((item) => {
     const reorderPoint = item.reorder_point ?? 0;
-    return (item.current_qty ?? 0) < reorderPoint && (item.current_qty ?? 0) > 0;
+    return (
+      (item.current_qty ?? 0) < reorderPoint && (item.current_qty ?? 0) > 0
+    );
   });
 
   // 품절 품목
@@ -96,7 +107,7 @@ export default async function InventoryKPICards() {
   );
 
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+    <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
       <KPICard
         icon={<AlertTriangle className='h-5 w-5' />}
         label='저재고 품목'

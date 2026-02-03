@@ -6,7 +6,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { getRecentStockMovements } from '@/utils/supabase/supabase';
+import { formatDate } from '@/lib/format';
+
+type Movement = {
+  id: number;
+  ingredient_name: string;
+  movement_type: string;
+  quantity: number;
+  created_at: string;
+};
+
+type Props = {
+  movements: Movement[];
+};
 
 function getMovementInfo(type: string) {
   if (type === 'in' || type === 'incoming') {
@@ -33,9 +45,7 @@ function getMovementInfo(type: string) {
   };
 }
 
-export default async function RecentMovements() {
-  const movements = await getRecentStockMovements(5);
-
+export default function RecentMovements({ movements }: Props) {
   return (
     <Card className='liquid-glass liquid-glass-hover rounded-2xl'>
       <CardHeader className='pb-2'>
@@ -49,27 +59,32 @@ export default async function RecentMovements() {
       </CardHeader>
       <CardContent className='pt-2'>
         <div className='overflow-x-auto'>
-          <table className='w-full'>
+          <table className='w-full' aria-label='최근 입출고 내역'>
             <thead>
               <tr className='border-b border-slate-100'>
-                <th className='text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>품목명</th>
-                <th className='text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>유형</th>
-                <th className='text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>수량</th>
-                <th className='text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider'>일시</th>
+                <th className='text-muted-foreground px-4 py-3 text-left text-xs font-medium tracking-wider uppercase'>
+                  품목명
+                </th>
+                <th className='text-muted-foreground px-4 py-3 text-left text-xs font-medium tracking-wider uppercase'>
+                  유형
+                </th>
+                <th className='text-muted-foreground px-4 py-3 text-right text-xs font-medium tracking-wider uppercase'>
+                  수량
+                </th>
+                <th className='text-muted-foreground px-4 py-3 text-right text-xs font-medium tracking-wider uppercase'>
+                  일시
+                </th>
               </tr>
             </thead>
             <tbody className='divide-y divide-slate-50'>
               {!movements || movements.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className='text-center py-10'
-                  >
+                  <td colSpan={4} className='py-10 text-center'>
                     <div className='flex flex-col items-center'>
-                      <div className='rounded-full bg-slate-50 p-3 mb-3'>
+                      <div className='mb-3 rounded-full bg-slate-50 p-3'>
                         <Package className='h-6 w-6 text-slate-400' />
                       </div>
-                      <p className='text-sm text-muted-foreground'>
+                      <p className='text-muted-foreground text-sm'>
                         최근 입출고 내역이 없습니다
                       </p>
                     </div>
@@ -80,24 +95,31 @@ export default async function RecentMovements() {
                   const info = getMovementInfo(movement.movement_type);
                   const Icon = info.icon;
                   return (
-                    <tr key={movement.id} className='hover:bg-slate-50/50 transition-colors'>
-                      <td className='py-3 px-4'>
-                        <span className='font-medium text-sm'>{movement.ingredient_name}</span>
+                    <tr
+                      key={movement.id}
+                      className='transition-colors hover:bg-slate-50/50'
+                    >
+                      <td className='px-4 py-3'>
+                        <span className='text-sm font-medium'>
+                          {movement.ingredient_name}
+                        </span>
                       </td>
-                      <td className='py-3 px-4'>
+                      <td className='px-4 py-3'>
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${info.style}`}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${info.style}`}
                         >
                           <Icon className={`h-3 w-3 ${info.iconColor}`} />
                           {info.label}
                         </span>
                       </td>
-                      <td className='py-3 px-4 text-right'>
-                        <span className='font-medium text-sm'>{movement.quantity}</span>
+                      <td className='px-4 py-3 text-right'>
+                        <span className='text-sm font-medium'>
+                          {movement.quantity}
+                        </span>
                       </td>
-                      <td className='py-3 px-4 text-right'>
-                        <span className='text-xs text-muted-foreground'>
-                          {new Date(movement.created_at).toLocaleDateString('ko-KR')}
+                      <td className='px-4 py-3 text-right'>
+                        <span className='text-muted-foreground text-xs'>
+                          {formatDate(movement.created_at)}
                         </span>
                       </td>
                     </tr>
