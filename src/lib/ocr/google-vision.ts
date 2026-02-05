@@ -5,6 +5,13 @@
  * Phase 2: Tesseract + GPT 하이브리드로 전환 예정
  */
 
+import { checkUsageLimit, incrementUsage } from '@/lib/api-usage';
+
+const CLOUD_VISION_API_NAME = 'cloud-vision';
+const CLOUD_VISION_DAILY_API_NAME = 'cloud-vision-daily';
+const MONTHLY_LIMIT = 1000;
+const DAILY_LIMIT = 33;
+
 // OCR 결과 타입
 export type OCRResult = {
   success: boolean;
@@ -23,8 +30,7 @@ export interface OCRProvider {
  */
 export class GoogleVisionOCR implements OCRProvider {
   private apiKey: string;
-  private apiEndpoint =
-    'https://vision.googleapis.com/v1/images:annotate';
+  private apiEndpoint = 'https://vision.googleapis.com/v1/images:annotate';
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.GOOGLE_CLOUD_API_KEY || '';
@@ -40,6 +46,28 @@ export class GoogleVisionOCR implements OCRProvider {
         success: false,
         text: '',
         error: 'Google Cloud API Key가 설정되지 않았습니다.',
+      };
+    }
+
+    // 일별/월별 사용량 병렬 체크
+    const [dailyCheck, monthlyCheck] = await Promise.all([
+      checkUsageLimit(CLOUD_VISION_DAILY_API_NAME, DAILY_LIMIT, 'daily'),
+      checkUsageLimit(CLOUD_VISION_API_NAME, MONTHLY_LIMIT, 'monthly'),
+    ]);
+
+    if (!dailyCheck.allowed) {
+      return {
+        success: false,
+        text: '',
+        error: `일 사용량 한도(${DAILY_LIMIT}건) 초과. 내일 다시 시도해주세요.`,
+      };
+    }
+
+    if (!monthlyCheck.allowed) {
+      return {
+        success: false,
+        text: '',
+        error: `월 사용량 한도(${MONTHLY_LIMIT.toLocaleString()}건) 초과. 다음 달에 다시 시도해주세요.`,
       };
     }
 
@@ -84,6 +112,10 @@ export class GoogleVisionOCR implements OCRProvider {
       }
 
       const data = await response.json();
+
+      // API 호출 성공 → 사용량 증가 (월별 + 일별 둘 다)
+      await incrementUsage(CLOUD_VISION_API_NAME, CLOUD_VISION_DAILY_API_NAME);
+
       const annotation = data.responses?.[0]?.fullTextAnnotation;
 
       if (!annotation) {
@@ -114,7 +146,9 @@ export class GoogleVisionOCR implements OCRProvider {
         success: false,
         text: '',
         error:
-          error instanceof Error ? error.message : 'OCR 처리 중 오류가 발생했습니다.',
+          error instanceof Error
+            ? error.message
+            : 'OCR 처리 중 오류가 발생했습니다.',
       };
     }
   }
