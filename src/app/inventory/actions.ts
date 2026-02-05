@@ -114,6 +114,7 @@ export async function bulkCreateStockMovementsAction(
     supplier?: string;
     reference_no?: string;
     note?: string;
+    transaction_date?: string;
   },
 ) {
   const result = await bulkCreateStockMovements(items, commonData);
