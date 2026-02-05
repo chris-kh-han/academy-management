@@ -3015,6 +3015,7 @@ export async function bulkCreateStockMovements(
     supplier?: string;
     reference_no?: string;
     note?: string;
+    transaction_date?: string; // YYYY-MM-DD 형식
   },
 ): Promise<{
   success: boolean;
@@ -3058,6 +3059,7 @@ export async function bulkCreateStockMovements(
         supplier: commonData?.supplier ?? null,
         reference_no: commonData?.reference_no ?? null,
         note: commonData?.note ?? null,
+        transaction_date: commonData?.transaction_date ?? null,
       });
 
     if (insertError) {
