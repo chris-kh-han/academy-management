@@ -1,5 +1,19 @@
 import { createServiceRoleClient } from '@/utils/supabase/server';
-import type { Sale, UserContext, Branch } from '@/types';
+import type {
+  Sale,
+  UserContext,
+  Branch,
+  Notification,
+  NotificationType,
+  Supplier,
+  Invoice,
+  InvoiceItem,
+  InvoiceStatus,
+  InvoiceItemMatchStatus,
+  InvoiceTemplate,
+  ConfirmInvoiceResult,
+  ConfirmInvoiceItemInput,
+} from '@/types';
 import { z } from 'zod';
 
 // ========== 입력 검증 스키마 ==========
@@ -3093,4 +3107,463 @@ export async function bulkCreateStockMovements(
     failed,
     errors,
   };
+}
+
+// ========== 공급업체(Supplier) 데이터 함수 ==========
+
+/**
+ * 지점의 모든 공급업체 조회
+ */
+export async function getSuppliers(branchId: string): Promise<Supplier[]> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select('*')
+    .eq('branch_id', branchId)
+    .order('name');
+
+  if (error) {
+    console.error('getSuppliers error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * 공급업체 단건 조회
+ */
+export async function getSupplierById(
+  supplierId: string,
+): Promise<Supplier | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select('*')
+    .eq('id', supplierId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getSupplierById error:', error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * 공급업체 검색 (이름 기준)
+ */
+export async function searchSuppliers(
+  branchId: string,
+  query: string,
+): Promise<Supplier[]> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('suppliers')
+    .select('*')
+    .eq('branch_id', branchId)
+    .ilike('name', `%${query}%`)
+    .eq('is_active', true)
+    .order('name')
+    .limit(20);
+
+  if (error) {
+    console.error('searchSuppliers error:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+// ========== 거래명세서(Invoice) 데이터 함수 ==========
+
+/**
+ * 지점의 거래명세서 목록 조회 (페이지네이션 + 필터)
+ */
+export async function getInvoices(
+  branchId: string,
+  options?: {
+    status?: InvoiceStatus;
+    supplierId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  },
+): Promise<{ data: Invoice[]; total: number }> {
+  const supabase = createServiceRoleClient();
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 20;
+  const offset = (page - 1) * limit;
+
+  let query = supabase
+    .from('invoices')
+    .select('*, supplier:suppliers(*)', { count: 'exact' })
+    .eq('branch_id', branchId)
+    .order('received_at', { ascending: false });
+
+  if (options?.status) {
+    query = query.eq('status', options.status);
+  }
+  if (options?.supplierId) {
+    query = query.eq('supplier_id', options.supplierId);
+  }
+  if (options?.startDate) {
+    query = query.gte('invoice_date', options.startDate);
+  }
+  if (options?.endDate) {
+    query = query.lte('invoice_date', options.endDate);
+  }
+
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('getInvoices error:', error);
+    return { data: [], total: 0 };
+  }
+
+  return {
+    data: (data as Invoice[]) || [],
+    total: count ?? 0,
+  };
+}
+
+/**
+ * 거래명세서 단건 조회 (품목 + 공급업체 포함)
+ */
+export async function getInvoiceById(
+  invoiceId: string,
+): Promise<Invoice | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(
+      `*,
+      supplier:suppliers(*),
+      items:invoice_items(
+        *,
+        ingredient:ingredients(id, ingredient_name, unit, category)
+      )`,
+    )
+    .eq('id', invoiceId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getInvoiceById error:', error);
+    return null;
+  }
+
+  return data as Invoice | null;
+}
+
+/**
+ * 거래명세서 통계 (대시보드용)
+ */
+export async function getInvoiceStats(branchId: string): Promise<{
+  todayReceived: number;
+  pendingInspection: number;
+  monthConfirmedAmount: number;
+  unmatchedItems: number;
+}> {
+  const supabase = createServiceRoleClient();
+  const today = getToday();
+  const monthStart = getMonthStart();
+  const todayRange = getDayRange(today);
+
+  // 4개 쿼리 병렬 실행
+  const [todayResult, pendingResult, monthResult, unmatchedResult] =
+    await Promise.all([
+      // 오늘 수신한 명세서 수
+      supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('branch_id', branchId)
+        .gte('received_at', todayRange.start)
+        .lte('received_at', todayRange.end),
+      // 검수 대기 (received + inspecting)
+      supabase
+        .from('invoices')
+        .select('id', { count: 'exact', head: true })
+        .eq('branch_id', branchId)
+        .in('status', ['received', 'inspecting']),
+      // 이번 달 확정 금액
+      supabase
+        .from('invoices')
+        .select('confirmed_amount')
+        .eq('branch_id', branchId)
+        .eq('status', 'confirmed')
+        .gte('confirmed_at', `${monthStart}T00:00:00`),
+      // 미매칭 품목 수
+      supabase
+        .from('invoice_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('match_status', 'unmatched')
+        .in(
+          'invoice_id',
+          // 서브쿼리 대신 branch_id 기준 invoice 목록으로 필터
+          (
+            await supabase
+              .from('invoices')
+              .select('id')
+              .eq('branch_id', branchId)
+          ).data?.map((i) => i.id) ?? [],
+        ),
+    ]);
+
+  const monthConfirmedAmount =
+    monthResult.data?.reduce(
+      (sum, row) => sum + (Number(row.confirmed_amount) || 0),
+      0,
+    ) ?? 0;
+
+  return {
+    todayReceived: todayResult.count ?? 0,
+    pendingInspection: pendingResult.count ?? 0,
+    monthConfirmedAmount,
+    unmatchedItems: unmatchedResult.count ?? 0,
+  };
+}
+
+/**
+ * 최근 거래명세서 조회
+ */
+export async function getRecentInvoices(
+  branchId: string,
+  limit: number = 5,
+): Promise<Invoice[]> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*, supplier:suppliers(id, name)')
+    .eq('branch_id', branchId)
+    .order('received_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getRecentInvoices error:', error);
+    return [];
+  }
+
+  return (data as Invoice[]) || [];
+}
+
+/**
+ * 공급업체별 템플릿 조회
+ */
+export async function getTemplateForSupplier(
+  supplierId: string,
+  branchId: string,
+): Promise<InvoiceTemplate | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('invoice_templates')
+    .select('*')
+    .eq('supplier_id', supplierId)
+    .eq('branch_id', branchId)
+    .order('usage_count', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('getTemplateForSupplier error:', error);
+    return null;
+  }
+
+  return data as InvoiceTemplate | null;
+}
+
+/**
+ * 공급업체 템플릿 생성/갱신 (upsert)
+ */
+export async function upsertInvoiceTemplate(
+  data: Partial<InvoiceTemplate> & {
+    supplier_id: string;
+    branch_id: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 기존 템플릿 조회
+  const { data: existing } = await supabase
+    .from('invoice_templates')
+    .select('id, usage_count, item_name_mappings')
+    .eq('supplier_id', data.supplier_id)
+    .eq('branch_id', data.branch_id)
+    .maybeSingle();
+
+  if (existing) {
+    // 기존 매핑 머지 (기존 + 새로운)
+    const mergedMappings = {
+      ...(existing.item_name_mappings as Record<string, string>),
+      ...data.item_name_mappings,
+    };
+
+    const { error } = await supabase
+      .from('invoice_templates')
+      .update({
+        field_mappings: data.field_mappings ?? {},
+        item_name_mappings: mergedMappings,
+        confidence_score: data.confidence_score ?? 0,
+        usage_count: (existing.usage_count ?? 0) + 1,
+        last_used_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+
+    if (error) {
+      console.error('upsertInvoiceTemplate update error:', error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    const { error } = await supabase.from('invoice_templates').insert({
+      supplier_id: data.supplier_id,
+      branch_id: data.branch_id,
+      template_name: data.template_name ?? '자동 생성 템플릿',
+      field_mappings: data.field_mappings ?? {},
+      item_name_mappings: data.item_name_mappings ?? {},
+      confidence_score: data.confidence_score ?? 0,
+      usage_count: 1,
+      last_used_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('upsertInvoiceTemplate insert error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  return { success: true };
+}
+
+// ========== 알림(Notification) 관련 함수 ==========
+
+/**
+ * 사용자의 읽지 않은 알림 목록 조회
+ */
+export async function getUnreadNotifications(
+  userId: string,
+  branchId: string,
+): Promise<Notification[]> {
+  const supabase = await createServiceRoleClient();
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('branch_id', branchId)
+    .is('read_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch unread notifications: ${error.message}`);
+  }
+
+  return (data ?? []) as Notification[];
+}
+
+/**
+ * 단일 알림 읽음 처리
+ */
+export async function markNotificationRead(
+  notificationId: string,
+): Promise<void> {
+  const supabase = await createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId);
+
+  if (error) {
+    throw new Error(`Failed to mark notification as read: ${error.message}`);
+  }
+}
+
+/**
+ * 사용자의 모든 알림 읽음 처리
+ */
+export async function markAllNotificationsRead(
+  userId: string,
+  branchId: string,
+): Promise<void> {
+  const supabase = await createServiceRoleClient();
+
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('branch_id', branchId)
+    .is('read_at', null);
+
+  if (error) {
+    throw new Error(
+      `Failed to mark all notifications as read: ${error.message}`,
+    );
+  }
+}
+
+/**
+ * 알림 생성
+ */
+export async function createNotification(data: {
+  user_id: string;
+  branch_id: string;
+  type: NotificationType;
+  title: string;
+  message?: string;
+  link?: string;
+}): Promise<Notification> {
+  const supabase = await createServiceRoleClient();
+
+  const { data: notification, error } = await supabase
+    .from('notifications')
+    .insert({
+      user_id: data.user_id,
+      branch_id: data.branch_id,
+      type: data.type,
+      title: data.title,
+      message: data.message ?? null,
+      link: data.link ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create notification: ${error.message}`);
+  }
+
+  return notification as Notification;
+}
+
+/**
+ * 읽지 않은 알림 개수 조회
+ */
+export async function getUnreadNotificationCount(
+  userId: string,
+  branchId: string,
+): Promise<number> {
+  const supabase = await createServiceRoleClient();
+
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('branch_id', branchId)
+    .is('read_at', null);
+
+  if (error) {
+    throw new Error(
+      `Failed to fetch unread notification count: ${error.message}`,
+    );
+  }
+
+  return count ?? 0;
 }

@@ -8,6 +8,11 @@
 
 import { GoogleGenAI, Part, Type } from '@google/genai';
 import { checkUsageLimit, incrementUsage } from '@/lib/api-usage';
+import {
+  searchSuppliers,
+  getTemplateForSupplier,
+} from '@/utils/supabase/supabase';
+import { createServiceRoleClient } from '@/utils/supabase/server';
 
 // API 사용량 제한 설정
 const GEMINI_API_NAME = 'gemini';
@@ -31,7 +36,9 @@ export type GeminiVisionResult = {
   success: boolean;
   items: ParsedItem[];
   supplier?: string;
+  supplierId?: string;
   referenceNo?: string;
+  invoiceId?: string;
   error?: string;
   usage?: {
     daily: { current: number; limit: number };
@@ -338,4 +345,165 @@ export async function extractInvoiceFromImage(
       },
     };
   }
+}
+
+// ========== 공급업체 자동 감지 (8a) ==========
+
+/**
+ * OCR에서 추출된 공급업체명으로 DB의 공급업체 자동 매칭
+ * 1. 정확한 이름 매칭
+ * 2. 부분 문자열 매칭 (contains check)
+ * @returns 매칭된 supplier_id 또는 null
+ */
+export async function matchSupplierFromOCR(
+  branchId: string,
+  ocrSupplierName: string,
+): Promise<string | null> {
+  if (!ocrSupplierName || ocrSupplierName.trim().length === 0) {
+    return null;
+  }
+
+  const trimmed = ocrSupplierName.trim();
+
+  // 1. 정확한 이름 매칭
+  const supabase = createServiceRoleClient();
+  const { data: exactMatch } = await supabase
+    .from('suppliers')
+    .select('id')
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .eq('name', trimmed)
+    .limit(1)
+    .maybeSingle();
+
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+
+  // 2. 부분 문자열 매칭 (ilike)
+  const fuzzyResults = await searchSuppliers(branchId, trimmed);
+  if (fuzzyResults.length > 0) {
+    return fuzzyResults[0].id;
+  }
+
+  return null;
+}
+
+// ========== 템플릿 기반 아이템 자동 매칭 (8b) ==========
+
+export type AutoMatchedItem = ParsedItem & {
+  matched_ingredient_id?: string | null;
+  match_status: 'auto_matched' | 'unmatched';
+};
+
+/**
+ * 템플릿의 item_name_mappings를 사용하여 OCR 품목을 재료에 자동 매칭
+ * @param branchId - 지점 ID
+ * @param supplierId - 공급업체 ID (템플릿 조회용)
+ * @param items - OCR로 추출된 품목 목록
+ * @returns 매칭 정보가 추가된 품목 목록
+ */
+export async function autoMatchItemsWithTemplate(
+  branchId: string,
+  supplierId: string,
+  items: ParsedItem[],
+): Promise<AutoMatchedItem[]> {
+  const template = await getTemplateForSupplier(supplierId, branchId);
+
+  if (!template || !template.item_name_mappings) {
+    return items.map((item) => ({
+      ...item,
+      matched_ingredient_id: null,
+      match_status: 'unmatched' as const,
+    }));
+  }
+
+  const mappings = template.item_name_mappings;
+
+  return items.map((item) => {
+    const normalizedName = item.name.trim().toLowerCase();
+
+    // 정확한 매핑 확인
+    const ingredientId = mappings[item.name] ?? mappings[normalizedName];
+
+    if (ingredientId) {
+      return {
+        ...item,
+        matched_ingredient_id: ingredientId,
+        match_status: 'auto_matched' as const,
+      };
+    }
+
+    // 부분 매칭 시도: 매핑 키가 아이템 이름에 포함되거나 그 반대
+    for (const [mappingKey, mappingValue] of Object.entries(mappings)) {
+      const normalizedKey = mappingKey.toLowerCase();
+      if (
+        normalizedName.includes(normalizedKey) ||
+        normalizedKey.includes(normalizedName)
+      ) {
+        return {
+          ...item,
+          matched_ingredient_id: mappingValue,
+          match_status: 'auto_matched' as const,
+        };
+      }
+    }
+
+    return {
+      ...item,
+      matched_ingredient_id: null,
+      match_status: 'unmatched' as const,
+    };
+  });
+}
+
+/**
+ * 확정된 명세서에서 템플릿 학습 데이터 추출 (8b)
+ * 수동 매칭된 item → ingredient 매핑을 저장
+ */
+export async function learnTemplateFromConfirmedInvoice(
+  invoiceId: string,
+  branchId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // 명세서 + 품목 조회
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('supplier_id')
+    .eq('id', invoiceId)
+    .maybeSingle();
+
+  if (!invoice?.supplier_id) {
+    return { success: false, error: '공급업체가 지정되지 않은 명세서입니다.' };
+  }
+
+  // 매칭된 품목만 조회
+  const { data: matchedItems } = await supabase
+    .from('invoice_items')
+    .select('item_name, matched_ingredient_id, match_status')
+    .eq('invoice_id', invoiceId)
+    .not('matched_ingredient_id', 'is', null);
+
+  if (!matchedItems || matchedItems.length === 0) {
+    return { success: true }; // 매칭된 항목 없으면 스킵
+  }
+
+  // item_name → ingredient_id 매핑 구성
+  const newMappings: Record<string, string> = {};
+  for (const item of matchedItems) {
+    if (item.matched_ingredient_id) {
+      newMappings[item.item_name] = item.matched_ingredient_id;
+    }
+  }
+
+  // 기존 supabase 함수 사용
+  const { upsertInvoiceTemplate } = await import('@/utils/supabase/supabase');
+
+  return upsertInvoiceTemplate({
+    supplier_id: invoice.supplier_id,
+    branch_id: branchId,
+    item_name_mappings: newMappings,
+    confidence_score: matchedItems.length,
+  });
 }

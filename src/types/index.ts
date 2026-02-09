@@ -549,3 +549,125 @@ export type GenerateRecommendationInput = {
   order_period_days?: number;
   avg_days?: number;
 };
+
+// ========== 거래명세서 관련 타입 ==========
+
+export type InvoiceStatus =
+  | 'received'
+  | 'inspecting'
+  | 'confirmed'
+  | 'disputed';
+
+export type DeliveryStatus = 'pending' | 'delivered' | 'partial';
+
+export type InvoiceItemMatchStatus =
+  | 'auto_matched'
+  | 'manual_matched'
+  | 'unmatched'
+  | 'new_ingredient';
+
+export type NotificationType =
+  | 'invoice_received'
+  | 'invoice_confirmed'
+  | 'invoice_disputed'
+  | 'low_stock'
+  | 'system';
+
+export type Supplier = {
+  id: string;
+  branch_id: string;
+  name: string;
+  business_no?: string | null;
+  contact_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  default_terms?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Invoice = {
+  id: string;
+  branch_id: string;
+  supplier_id?: string | null;
+  invoice_no?: string | null;
+  invoice_date?: string | null;
+  received_at?: string;
+  status: InvoiceStatus;
+  delivery_status: DeliveryStatus;
+  total_amount: number;
+  confirmed_amount: number;
+  image_url?: string | null;
+  notes?: string | null;
+  confirmed_by?: string | null;
+  confirmed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // joined data
+  supplier?: Supplier | null;
+  items?: InvoiceItem[];
+};
+
+export type InvoiceItem = {
+  id: string;
+  invoice_id: string;
+  item_name: string;
+  quantity: number;
+  unit?: string | null;
+  unit_price: number;
+  total_price: number;
+  box_qty: number;
+  ea_qty: number;
+  matched_ingredient_id?: string | null;
+  match_status: InvoiceItemMatchStatus;
+  confirmed_qty?: number | null;
+  note?: string | null;
+  created_at?: string;
+  // joined data
+  ingredient?: Ingredient;
+};
+
+export type InvoiceTemplate = {
+  id: string;
+  supplier_id?: string | null;
+  branch_id: string;
+  template_name?: string | null;
+  field_mappings: Record<string, unknown>;
+  item_name_mappings: Record<string, string>;
+  confidence_score: number;
+  usage_count: number;
+  last_used_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  branch_id?: string | null;
+  type: NotificationType;
+  title: string;
+  message?: string | null;
+  link?: string | null;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+// confirm_invoice RPC 응답 타입
+export type ConfirmInvoiceResult = {
+  success: boolean;
+  invoice_id?: string;
+  confirmed_amount?: number;
+  stock_movements_created?: number;
+  error?: string;
+};
+
+// confirm_invoice RPC 아이템 입력 타입
+export type ConfirmInvoiceItemInput = {
+  invoice_item_id: string;
+  confirmed_qty: number;
+  matched_ingredient_id?: string | null;
+};

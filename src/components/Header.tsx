@@ -26,6 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import BranchSwitcher from '@/components/BranchSwitcher';
+import NotificationBell from '@/components/NotificationBell';
 import { useBranch } from '@/contexts/BranchContext';
 import { signOut } from '@/app/auth/actions';
 
@@ -63,7 +64,7 @@ export default function Header() {
   });
 
   return (
-    <header className='h-16 border-b border-border bg-background flex items-center justify-between px-4 shrink-0'>
+    <header className='border-border bg-background flex h-16 shrink-0 items-center justify-between border-b px-4'>
       <div className='flex items-center gap-4'>
         <Link href='/' className='flex items-center gap-2'>
           {currentBrand?.logo_url ? (
@@ -79,13 +80,13 @@ export default function Header() {
           )}
         </Link>
         {/* 지점 선택기 */}
-        <div className='hidden sm:block border-l pl-4'>
+        <div className='hidden border-l pl-4 sm:block'>
           <BranchSwitcher />
         </div>
       </div>
 
-      {/* 모바일 메뉴 */}
       <div className='flex items-center gap-2'>
+        <NotificationBell />
         {/* 모바일 햄버거 메뉴 */}
         <div className='block md:hidden'>
           {mounted && (
@@ -107,7 +108,7 @@ export default function Header() {
                         href={menu.path}
                         className={cn(
                           'w-full cursor-pointer',
-                          isActive && 'bg-accent'
+                          isActive && 'bg-accent',
                         )}
                       >
                         {menu.label}
@@ -120,7 +121,7 @@ export default function Header() {
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem
                       onSelect={(e) => e.preventDefault()}
-                      className='flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600'
+                      className='flex cursor-pointer items-center gap-2 text-red-600 focus:text-red-600'
                     >
                       <LogOut className='h-4 w-4' />
                       로그아웃
@@ -136,7 +137,10 @@ export default function Header() {
                     <AlertDialogFooter>
                       <AlertDialogCancel>취소</AlertDialogCancel>
                       <form action={signOut}>
-                        <AlertDialogAction type='submit' className='bg-red-500 hover:bg-red-600'>
+                        <AlertDialogAction
+                          type='submit'
+                          className='bg-red-500 hover:bg-red-600'
+                        >
                           로그아웃
                         </AlertDialogAction>
                       </form>
